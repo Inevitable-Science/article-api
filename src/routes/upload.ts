@@ -1,0 +1,115 @@
+import { Request, Response } from "express";
+import multer from "multer";
+import { PutObjectCommand } from "@aws-sdk/client-s3";
+import { v4 as uuidv4 } from "uuid";
+import path from "path";
+import jwt from "jsonwebtoken";
+
+import { s3Client } from "../index";
+import { ENV } from "../utils/env";
+import { JwtBody } from "../utils/types";
+import UserModel from "../database/userSchema";
+
+/*
+curl -X POST http://localhost:3001/upload \
+  -F "file=@/Users/michaelzackor/Inevitable/contribute/assets/old/branding/logo.svg" \
+  -v
+
+ */
+
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB max
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith("image/")) {
+      cb(null, true);
+    } else {
+      cb(new Error("Only image files are allowed"));
+    }
+  },
+});
+
+
+export async function uploadImageHandler(
+  req: Request,
+  res: Response
+): Promise<void> {
+  upload.single("file")(req, res, async (err) => {
+    if (err) {
+      if (err instanceof multer.MulterError) {
+        res.status(400).json({ error: err.message });
+        return;
+      }
+      res.status(400).json({ error: err.message || "File upload error" });
+      return;
+    }
+
+    if (!req.file) {
+      res.status(400).json({ error: "No file provided" });
+      return;
+    }
+
+    try {
+      const { uploadType } = req.params;
+      const authHeader = req.headers.authorization;
+
+      if (!authHeader) {
+        return res.status(403).json({ error: "forbidden" });
+      }
+
+      const parts = authHeader.split(" ");
+      if (parts.length !== 2 || parts[0] !== "Bearer") {
+        return res.status(401).json({ error: "Invalid Authorization header format" });
+      };
+
+      const authToken = parts[1];
+
+      const decoded = jwt.verify(authToken, ENV.JWT_SECRET);
+      const parsedDecoded = JwtBody.parse(decoded);
+
+      const user = await UserModel.findOne({ userId: parsedDecoded.userId });
+
+      if (!user) {
+        return res.status(403).json({ error: "user not found" });
+      }
+
+      if (uploadType !== "profile" && uploadType !== "article" && uploadType !== "organisation") {
+        return res.status(400).json({ error: "Upload type must be specified" });
+      };
+
+      const file = req.file;
+      const ext = path.extname(file.originalname) || ".jpg";
+      const key = `${uploadType}/${uuidv4()}${ext}`;
+
+      // Upload to S3
+      await s3Client.send(
+        new PutObjectCommand({
+          Bucket: ENV.S3_BUCKET_NAME!,
+          Key: key,
+          Body: file.buffer,
+          ContentType: file.mimetype,
+          //ACL: "public-read", // Makes it publicly readable
+          CacheControl: "public, max-age=31536000, immutable", // 1 year cache
+        })
+      );
+
+      // Generate final CloudFront URL
+      const cloudfrontUrl = `https://${ENV.CLOUDFRONT_DOMAIN}/${key}`;
+
+      user.attachments.push(cloudfrontUrl); // Save UUID, cloudfront domain can alter
+      await user.save();
+
+      return res.status(200).json({
+        success: true,
+        url: cloudfrontUrl,
+      });
+    } catch (error: any) {
+      console.error("S3 upload failed:", error);
+      res.status(500).json({
+        error: "Failed to upload image",
+        details: error.message,
+      });
+    }
+  });
+};
