@@ -121,10 +121,10 @@ export async function getUserHandler(req: Request, res: Response): Promise<void>
 
     const response = {
       user,
-      organisations,
+      organisations: organisations ?? [],
       writtenArticles: filteredUserWritten,
       editedArticles: filteredUserEdited,
-      editableArticles: articles,
+      editableArticles: articles ?? [],
     };
     
     res.status(200).json(response);
@@ -176,8 +176,8 @@ export async function getAllUserHandler(req: Request, res: Response): Promise<vo
 
 
 const CreateBody = z.object({
-  address: z.string(),
-  signature: z.string(),
+  //address: z.string(),
+  //signature: z.string(),
   overwritePassword: z.string().optional(),
   user: z.object({
     walletAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
@@ -195,6 +195,9 @@ const CreateBody = z.object({
 
 export async function createUserHandler(req: Request, res: Response): Promise<void> {
   try {
+    const authHeader = req.headers.authorization;
+    const userId = VerifyJWT(authHeader);
+
     const parsed = CreateBody.safeParse(req.body);
     if (!parsed.success) {
       res.status(400).json({ error: "Invalid Body" });
@@ -207,7 +210,7 @@ export async function createUserHandler(req: Request, res: Response): Promise<vo
 
     if (data.overwritePassword !== ENV.APP_PASSWORD) {
       const [user, isExistingUser] = await Promise.all([
-        await UserModel.findOne({ walletAddress: data.address.toLowerCase() }),
+        await UserModel.findOne({ userId: userId.toLowerCase() }),
         await UserModel.findOne({ walletAddress: passedUser.walletAddress.toLowerCase() }),
       ]);
 
@@ -225,22 +228,7 @@ export async function createUserHandler(req: Request, res: Response): Promise<vo
         res.status(400).json({ error: "User Already Exists" });
         return;
       };
-
-      const message = getMessage("createUser", user.walletAddress, user.currentNonce);
-
-      const valid = verifyMessage({
-        address: data.address as Address,
-        message,
-        signature: data.signature as `0x${string}`
-      });
-
-      user.currentNonce += 1;
-      await user.save();
-
-      if (!valid) {
-        res.status(403).json({ error: "Signature invalid" });
-        return;
-      };
+      
     } else {
       const existingUser = await UserModel.findOne({ walletAddress: passedUser.walletAddress.toLowerCase() });
 
@@ -283,13 +271,17 @@ export async function createUserHandler(req: Request, res: Response): Promise<vo
     if (!createdUser) throw new Error();
 
     const newUserOrgs = data.user.organisations;
+
+    const uniqueOrgs = Array.from(
+      new Map(newUserOrgs.map(org => [org.organisationId, org])).values()
+    );
     if (passedUser.isTopLevelAdmin && newUserOrgs.length === 0) {
       res.status(200).json({ message: "Successfully created new user" });
       return;
     };
 
     
-    for (const org of newUserOrgs) {
+    for (const org of uniqueOrgs) {
       try {
         const organisation = await OrganisationModel.findOne({ organisationId: org.organisationId });
         if (!organisation) continue;

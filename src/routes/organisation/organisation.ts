@@ -145,6 +145,12 @@ export async function createOrgHandler(req: Request, res: Response): Promise<voi
       };
     };
 
+    const hasDuplicates = new Set(parsed.users.map(u => u.userId)).size !== parsed.users.length;
+    if (hasDuplicates) {
+      res.status(400).json({ error: "Dupelicate Users" });
+      return;
+    };
+
     const constructedOrg: Organisation = {
       ...parsed,
       organisationId: uniqueId,
@@ -186,6 +192,12 @@ export async function editOrgHandler(req: Request, res: Response): Promise<void>
     const userRoles = organisation.users.find(u => u.userId === user.userId);
     if (!user.isTopLevelAdmin && !userRoles?.isAdmin) {
       res.status(403).json({ error: "User Is Not An Admin"});
+      return;
+    };
+
+    const hasDuplicates = new Set(data.users.map(u => u.userId)).size !== data.users.length;
+    if (hasDuplicates) {
+      res.status(400).json({ error: "Dupelicate Users" });
       return;
     };
     

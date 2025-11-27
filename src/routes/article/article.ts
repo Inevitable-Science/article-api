@@ -249,8 +249,13 @@ export async function editArticleHandler(req: Request, res: Response): Promise<v
       };
     };
 
-    const editors = user.userId === article.metadata.author ? 
-    article.metadata.editors : [...article.metadata.editors, user.userId];
+    const isAlreadyEditor =
+      user.userId === article.metadata.author ||
+      article.metadata.editors.includes(user.userId);
+
+    const editors = isAlreadyEditor
+      ? article.metadata.editors
+      : [...article.metadata.editors, user.userId];
 
     const objectArticle = article.toObject();
 
