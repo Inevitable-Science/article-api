@@ -1,12 +1,10 @@
-// fetch org
-// edit org
-// add user to org
-
-import ArticleModel from "../../database/articleSchema";
-import OrganisationModel, { Organisation, OrganisationSchemaZ, UserPermissionsZ } from "../../database/organisationSchema";
-import UserModel from "../../database/userSchema";
-import { generateRandomId, VerifyJWT } from "../../utils/utils";
 import { Request, Response } from "express";
+import ArticleModel from "../../database/articleSchema";
+import UserModel from "../../database/userSchema";
+import OrganisationModel, { Organisation, OrganisationSchemaZ, UserPermissionsZ } from "../../database/organisationSchema";
+
+import { generateRandomId, VerifyJWT } from "../../utils/utils";
+
 import z from "zod";
 
 

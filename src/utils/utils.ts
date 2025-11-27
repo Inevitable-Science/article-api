@@ -1,7 +1,14 @@
-import jwt from "jsonwebtoken";
 import { ENV } from "./env";
-import { JwtBody, JwtBodyType } from "./types";
-import { Address } from "viem";
+
+import jwt from "jsonwebtoken";
+import z from "zod";
+
+
+export const JwtBody = z.object({
+  userId: z.string(),
+});
+
+export type JwtBodyType = z.infer<typeof JwtBody>;
 
 export function VerifyJWT(authHeader: string | undefined): string {
   if (!authHeader) {

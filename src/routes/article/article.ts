@@ -23,7 +23,7 @@ export async function fetchArticleHandler(req: Request, res: Response): Promise<
       ArticleModel.findOne({ articleId: parsed.data }),
     ]);
 
-    if (!user || !article) {
+    if (!user || !article || article.displayRules.deleted) {
       res.status(403).json({ error: "Component Not Found" });
       return;
     };
@@ -65,7 +65,6 @@ export async function fetchArticleHandler(req: Request, res: Response): Promise<
         canDelete: true,
       };
     };
-
 
 
     const [author, editors] = await Promise.all([
@@ -226,7 +225,7 @@ export async function editArticleHandler(req: Request, res: Response): Promise<v
       await ArticleModel.findOne({ articleId: parsedArticleId })
     ]);
 
-    if (!user || !article) {
+    if (!user || !article || article.displayRules.deleted) {
       res.status(404).json({ error: "Component Not Found" });
       return;
     };
@@ -307,7 +306,7 @@ export async function deleteArticleHandler(req: Request, res: Response): Promise
       ArticleModel.findOne({ articleId })
     ]);
 
-    if (!user || !article) {
+    if (!user || !article || article.displayRules.deleted) {
       res.status(404).json({ error: "User Or Article Not Found" });
       return;
     };

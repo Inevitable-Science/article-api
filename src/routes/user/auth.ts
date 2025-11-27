@@ -1,9 +1,11 @@
 import { Request, Response } from "express";
-import { Address, verifyMessage } from "viem";
-import { ENV } from "../../utils/env";
 import UserModel from '../../database/userSchema';
-import { JwtBodyType } from "../../utils/types";
+
+import { ENV } from "../../utils/env";
+import { JwtBodyType } from "../../utils/utils";
 import { getMessage } from "../../utils/utils";
+
+import { Address, verifyMessage } from "viem";
 import z from "zod";
 import jwt from "jsonwebtoken";
 

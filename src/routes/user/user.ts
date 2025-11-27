@@ -1,10 +1,12 @@
 import { Request, Response } from "express";
-import { Address, verifyMessage } from "viem";
+
 import ArticleModel from "../../database/articleSchema";
-import OrganisationModel, { UserPermissions, UserPermissionsZ } from "../../database/organisationSchema";
 import UserModel, { UserSchema, UserSchemaZ } from "../../database/userSchema";
-import { generateRandomId, getMessage, VerifyJWT } from "../../utils/utils";
+import OrganisationModel, { UserPermissions, UserPermissionsZ } from "../../database/organisationSchema";
+
+import { generateRandomId, VerifyJWT } from "../../utils/utils";
 import { ENV } from "../../utils/env";
+
 import z from "zod";
 import _ from "lodash";
 
@@ -80,14 +82,6 @@ export async function getUserHandler(req: Request, res: Response): Promise<void>
         });
       };
     };
-
-    /*const userWrittenArticles = await ArticleModel.find({
-      "metadata.author": userId
-    });
-
-    const userEditedArticles = await ArticleModel.find({
-      "metadata.editors": userId
-    });*/
 
     const [userWrittenArticles, userEditedArticles] = await Promise.all([
       await ArticleModel.find({
@@ -176,8 +170,6 @@ export async function getAllUserHandler(req: Request, res: Response): Promise<vo
 
 
 const CreateBody = z.object({
-  //address: z.string(),
-  //signature: z.string(),
   overwritePassword: z.string().optional(),
   user: z.object({
     walletAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
