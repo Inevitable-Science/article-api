@@ -1,15 +1,14 @@
 import { Request, Response } from "express";
-import UserModel from "../database/userSchema";
-
-import { s3Client } from "../index";
-import { ENV } from "../utils/env";
-import { JwtBody } from "../utils/utils";
-
 import multer from "multer";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { v4 as uuidv4 } from "uuid";
 import path from "path";
 import jwt from "jsonwebtoken";
+
+import UserModel from "../database/userSchema";
+import { s3Client } from "../index";
+import { ENV } from "../utils/env";
+import { JwtBody } from "../utils/utils";
 
 const upload = multer({
   storage: multer.memoryStorage(),

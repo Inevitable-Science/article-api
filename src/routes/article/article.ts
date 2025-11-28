@@ -1,11 +1,9 @@
+import { Request, Response } from "express";
 import z from "zod";
+
 import UserModel from "../../database/userSchema";
 import { generateRandomId, VerifyJWT } from "../../utils/utils";
-import { Request, Response, urlencoded } from "express";
-import OrganisationModel, {
-  Organisation,
-  UserPermissions,
-} from "../../database/organisationSchema";
+import OrganisationModel from "../../database/organisationSchema";
 import ArticleModel, {
   Article,
   ArticleSchemaZ,

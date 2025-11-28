@@ -1,7 +1,7 @@
-import { ENV } from "./env";
-
 import jwt from "jsonwebtoken";
 import z from "zod";
+
+import { ENV } from "./env";
 
 export const JwtBody = z.object({
   userId: z.string(),
@@ -45,18 +45,4 @@ export function generateRandomId(idType: IdType): string {
     result += chars.charAt(Math.floor(Math.random() * chars.length));
   }
   return `0x${result}`.toLowerCase();
-}
-
-const actions = ["login"] as const;
-type Action = (typeof actions)[number];
-
-export function getMessage(
-  action: Action,
-  walletAddress: string,
-  nonce: number
-) {
-  if (!action || !walletAddress || typeof nonce !== "number") throw new Error();
-
-  const message = `Authorize this action by signing below.\nNo cost. No sensitive data shared.\nAction: ${action}\nAddress: ${walletAddress.toLowerCase()}\nNonce: ${nonce}`;
-  return message;
 }

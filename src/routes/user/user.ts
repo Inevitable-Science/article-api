@@ -1,4 +1,6 @@
 import { Request, Response } from "express";
+import z from "zod";
+import _ from "lodash";
 
 import ArticleModel from "../../database/articleSchema";
 import UserModel, { UserSchema, UserSchemaZ } from "../../database/userSchema";
@@ -10,8 +12,6 @@ import OrganisationModel, {
 import { generateRandomId, VerifyJWT } from "../../utils/utils";
 import { ENV } from "../../utils/env";
 
-import z from "zod";
-import _ from "lodash";
 
 export async function getUserHandler(
   req: Request,

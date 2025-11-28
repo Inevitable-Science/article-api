@@ -1,13 +1,12 @@
 import { Request, Response } from "express";
-import UserModel from "../../database/userSchema";
-
-import { ENV } from "../../utils/env";
-import { JwtBodyType } from "../../utils/utils";
-import { getMessage } from "../../utils/utils";
-
 import { Address, verifyMessage } from "viem";
 import z from "zod";
 import jwt from "jsonwebtoken";
+
+import UserModel from "../../database/userSchema";
+import { ENV } from "../../utils/env";
+import { JwtBodyType } from "../../utils/utils";
+
 
 export async function getNonceHandler(
   req: Request,
@@ -61,7 +60,7 @@ export async function loginHandler(req: Request, res: Response): Promise<void> {
       return;
     }
 
-    const message = getMessage("login", user.walletAddress, user.currentNonce);
+    const message = `Authorize this action by signing below.\nNo cost. No sensitive data shared.\nAction: login\nAddress: ${address.toLowerCase()}\nNonce: ${user.currentNonce}`;
 
     const valid = await verifyMessage({
       address: user.walletAddress as Address,
