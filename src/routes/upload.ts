@@ -8,7 +8,7 @@ import jwt from "jsonwebtoken";
 import UserModel from "../database/userSchema";
 import { s3Client } from "../index";
 import { ENV } from "../utils/env";
-import { JwtBody } from "../utils/utils";
+import { JwtBody, VerifyJWT } from "../utils/utils";
 import { ErrorCodes } from "../utils/errors/errors";
 import { handleServerError } from "../utils/errors/errorHandler";
 
@@ -45,26 +45,9 @@ export async function uploadImageHandler(
 
     try {
       const { uploadType } = req.params;
-      const authHeader = req.headers.authorization;
+      const userId = VerifyJWT(req, res);
 
-      if (!authHeader) {
-        return res.status(403).json({ error: ErrorCodes.UNAUTHORIZED });
-      }
-
-      const parts = authHeader.split(" ");
-      if (parts.length !== 2 || parts[0] !== "Bearer") {
-        return res
-          .status(401)
-          .json({ error: ErrorCodes.BAD_REQUEST });
-      }
-
-      const authToken = parts[1];
-
-      const decoded = jwt.verify(authToken, ENV.JWT_SECRET);
-      const parsedDecoded = JwtBody.parse(decoded);
-
-      const user = await UserModel.findOne({ userId: parsedDecoded.userId });
-
+      const user = await UserModel.findOne({ userId });
       if (!user) {
         return res.status(403).json({ error: ErrorCodes.USER_NOT_FOUND });
       }
@@ -79,7 +62,7 @@ export async function uploadImageHandler(
 
       const file = req.file;
       const ext = path.extname(file.originalname) || ".jpg";
-      const key = `${uploadType}/${uuidv4()}${ext}`;
+      const key = `/article/${uploadType}/${uuidv4()}${ext}`;
 
       // Upload to S3
       await s3Client.send(

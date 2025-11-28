@@ -9,10 +9,11 @@ import OrganisationModel, {
   UserPermissionsZ,
 } from "../../database/organisationSchema";
 
-import { generateRandomId, VerifyJWT } from "../../utils/utils";
+import { generateDiscordTimestamp, generateRandomId, VerifyJWT } from "../../utils/utils";
 import { ENV } from "../../utils/env";
 import { ErrorCodes } from "../../utils/errors/errors";
 import { handleServerError } from "../../utils/errors/errorHandler";
+import logAction, { Embed } from "../../utils/logAction";
 
 
 export async function getUserHandler(
@@ -20,11 +21,9 @@ export async function getUserHandler(
   res: Response
 ): Promise<void> {
   try {
-    const authHeader = req.headers.authorization;
-    const userId = VerifyJWT(authHeader);
-
+    const userId = VerifyJWT(req, res);
+    
     const user = await UserModel.findOne({ userId });
-
     if (!user) {
       res.status(404).json({ error: ErrorCodes.USER_NOT_FOUND });
       return;
@@ -149,8 +148,7 @@ export async function getAllUserHandler(
   res: Response
 ): Promise<void> {
   try {
-    const authHeader = req.headers.authorization;
-    const userId = VerifyJWT(authHeader);
+    const userId = VerifyJWT(req, res);
 
     const user = await UserModel.findOne({ userId });
     if (!user) {
@@ -202,8 +200,8 @@ export async function createUserHandler(
   res: Response
 ): Promise<void> {
   try {
-    const authHeader = req.headers.authorization;
-    const userId = VerifyJWT(authHeader);
+    const userId = VerifyJWT(req, res);
+    if (!userId) return;
 
     const parsed = CreateBody.safeParse(req.body);
     if (!parsed.success) {
@@ -214,6 +212,7 @@ export async function createUserHandler(
     const data = parsed.data;
     const passedUser = data.user;
 
+    let username = "admin";
     if (data.overwritePassword !== ENV.APP_PASSWORD) {
       const [user, isExistingUser] = await Promise.all([
         await UserModel.findOne({ userId: userId.toLowerCase() }),
@@ -235,7 +234,9 @@ export async function createUserHandler(
       if (isExistingUser) {
         res.status(400).json({ error: ErrorCodes.BAD_REQUEST });
         return;
-      }
+      };
+
+      username = user.userMetadata.username;
     } else {
       const existingUser = await UserModel.findOne({
         walletAddress: passedUser.walletAddress.toLowerCase(),
@@ -323,7 +324,20 @@ export async function createUserHandler(
         console.log(err);
         continue;
       }
-    }
+    };
+
+    const constructedEmbed: Embed = {
+      title: "User Created",
+      description: `User With Wallet Address **${passedUser.walletAddress.toLowerCase()}** Created ${generateDiscordTimestamp(new Date(), "R")}`,
+      author: {
+        name: `${username} - ${userId}`
+      }
+    };
+
+    await logAction({
+      action: "logAction",
+      embed: constructedEmbed
+    });
 
     res.status(200).json({ message: "Successfully created new user" });
     return;
@@ -347,8 +361,7 @@ export async function editUserHandler(
   res: Response
 ): Promise<void> {
   try {
-    const authHeader = req.headers.authorization;
-    const userId = VerifyJWT(authHeader);
+    const userId = VerifyJWT(req, res);
 
     const parsed = EditBody.safeParse(req.body);
     if (!parsed.success) {
@@ -366,6 +379,20 @@ export async function editUserHandler(
 
     _.merge(user.userMetadata, userChanges);
     await user.save();
+
+    const constructedEmbed: Embed = {
+      title: "User Edited",
+      description: `Edited ${generateDiscordTimestamp(new Date(), "R")}`,
+      author: {
+        name: `${user.userMetadata.username} - ${user.userId}`,
+        icon_url: user.userMetadata.profilePicture
+      }
+    };
+
+    await logAction({
+      action: "logAction",
+      embed: constructedEmbed
+    });
 
     res.status(200).json({ message: "User Changes Saved" });
     return;

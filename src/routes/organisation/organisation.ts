@@ -9,19 +9,24 @@ import OrganisationModel, {
   UserPermissionsZ,
 } from "../../database/organisationSchema";
 
-import { generateRandomId, VerifyJWT } from "../../utils/utils";
+import { generateDiscordTimestamp, generateRandomId, VerifyJWT } from "../../utils/utils";
 import { ErrorCodes } from "../../utils/errors/errors";
 import { handleServerError } from "../../utils/errors/errorHandler";
+import logAction, { Embed } from "../../utils/logAction";
+
 
 export async function fetchOrgHandler(
   req: Request,
   res: Response
 ): Promise<void> {
   try {
-    const authHeader = req.headers.authorization;
+    const userId = VerifyJWT(req, res);
 
-    const userId = VerifyJWT(authHeader);
-    const organisationId = z.string().parse(req.params.organisationId);
+    const parsedOrgId = z.string().safeParse(req.params.organisationId);
+    if (!parsedOrgId.success) {
+      res.status(400).json({ error: ErrorCodes.BAD_REQUEST });
+    };
+    const organisationId = parsedOrgId.data;
 
     const [user, organisation] = await Promise.all([
       await UserModel.findOne({ userId }),
@@ -130,11 +135,15 @@ export async function createOrgHandler(
   res: Response
 ): Promise<void> {
   try {
-    const authHeader = req.headers.authorization;
-    const userId = VerifyJWT(authHeader);
+    const userId = VerifyJWT(req, res);
 
     const user = await UserModel.findOne({ userId });
-    const parsed = CreateBody.parse(req.body);
+    const parsedBody = CreateBody.safeParse(req.body);
+    if (!parsedBody.success) {
+      res.status(400).json({ error: ErrorCodes.BAD_REQUEST });
+      return;
+    }
+    const data = parsedBody.data;
 
     if (!user) {
       res.status(404).json({ error: ErrorCodes.USER_NOT_FOUND });
@@ -157,21 +166,39 @@ export async function createOrgHandler(
     }
 
     const hasDuplicates =
-      new Set(parsed.users.map((u) => u.userId)).size !== parsed.users.length;
+      new Set(data.users.map((u) => u.userId)).size !== data.users.length;
     if (hasDuplicates) {
       res.status(400).json({ error: ErrorCodes.DUPLICATE_ERROR });
       return;
     }
 
     const constructedOrg: Organisation = {
-      ...parsed,
+      ...data,
       organisationId: uniqueId,
     };
 
-    const parsedOrg = OrganisationSchemaZ.parse(constructedOrg);
-    const createdOrg = await OrganisationModel.create(parsedOrg);
+    const parsedOrg = OrganisationSchemaZ.safeParse(constructedOrg);
+    if (!parsedOrg.success) {
+      res.status(400).json({ error: ErrorCodes.BAD_REQUEST });
+      return;
+    }
+    const createdOrg = await OrganisationModel.create(parsedOrg.data);
 
     if (!createdOrg) throw new Error(ErrorCodes.DATABASE_ERROR);
+
+    const constructedEmbed: Embed = {
+      title: "Organisation Created",
+      description: `${data.organisationName} Created ${generateDiscordTimestamp(new Date(), "R")}`,
+      author: {
+        name: `${user.userMetadata.username} - ${user.userId}`,
+        icon_url: user.userMetadata.profilePicture
+      }
+    };
+
+    await logAction({
+      action: "logAction",
+      embed: constructedEmbed
+    });
 
     res.status(200).json({ organisation: createdOrg });
     return;
@@ -185,11 +212,17 @@ export async function editOrgHandler(
   res: Response
 ): Promise<void> {
   try {
-    const authHeader = req.headers.authorization;
-    const userId = VerifyJWT(authHeader);
+    const userId = VerifyJWT(req, res);
 
-    const data = CreateBody.parse(req.body);
-    const organisationId = z.string().parse(req.params.organisationId);
+    const parsedData = CreateBody.safeParse(req.body);
+    const parsedOrganisationId = z.string().safeParse(req.params.organisationId);
+
+    if (!parsedData.success || !parsedOrganisationId) {
+      res.status(400).json({ error: ErrorCodes.BAD_REQUEST });
+      return;
+    }
+    const data = parsedData.data;
+    const organisationId = parsedOrganisationId.data;
 
     const [user, organisation] = await Promise.all([
       await UserModel.findOne({ userId }),
@@ -216,6 +249,20 @@ export async function editOrgHandler(
 
     Object.assign(organisation, data);
     await organisation.save();
+
+    const constructedEmbed: Embed = {
+      title: "Organisation Edited",
+      description: `${organisation.organisationName} Edited ${generateDiscordTimestamp(new Date(), "R")}`,
+      author: {
+        name: `${user.userMetadata.username} - ${user.userId}`,
+        icon_url: user.userMetadata.profilePicture
+      }
+    };
+
+    await logAction({
+      action: "logAction",
+      embed: constructedEmbed
+    });
 
     res.status(200).json({ organisation: data });
     return;

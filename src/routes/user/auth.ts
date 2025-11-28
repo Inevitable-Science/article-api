@@ -5,9 +5,10 @@ import jwt from "jsonwebtoken";
 
 import UserModel from "../../database/userSchema";
 import { ENV } from "../../utils/env";
-import { JwtBodyType } from "../../utils/utils";
+import { generateDiscordTimestamp, JwtBodyType } from "../../utils/utils";
 import { ErrorCodes } from "../../utils/errors/errors";
 import { handleServerError } from "../../utils/errors/errorHandler";
+import logAction, { Embed } from "../../utils/logAction";
 
 
 export async function getNonceHandler(
@@ -87,6 +88,20 @@ export async function loginHandler(req: Request, res: Response): Promise<void> {
 
     const payload: JwtBodyType = { userId: user.userId.toLowerCase() };
     const userToken = jwt.sign(payload, ENV.JWT_SECRET, { expiresIn: "7d" });
+
+    const constructedEmbed: Embed = {
+      title: "User Logged In",
+      description: `${user.userMetadata.username} Logged In ${generateDiscordTimestamp(new Date(), "R")}`,
+      author: {
+        name: `${user.userMetadata.username} - ${user.userId}`,
+        icon_url: user.userMetadata.profilePicture
+      }
+    };
+
+    await logAction({
+      action: "logAction",
+      embed: constructedEmbed
+    });
 
     res.status(200).json({ key: userToken });
     return;

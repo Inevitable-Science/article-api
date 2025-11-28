@@ -3,6 +3,7 @@ import z from "zod";
 
 import { ENV } from "./env";
 import { ErrorCodes } from "./errors/errors";
+import { Request, Response } from "express";
 
 export const JwtBody = z.object({
   userId: z.string(),
@@ -10,24 +11,32 @@ export const JwtBody = z.object({
 
 export type JwtBodyType = z.infer<typeof JwtBody>;
 
-export function VerifyJWT(authHeader: string | undefined): string {
+
+export function VerifyJWT(req: Request, res: Response): string | undefined {
+  const authHeader = req.headers.authorization;
+
   if (!authHeader) {
-    throw new Error(ErrorCodes.UNAUTHORIZED);
+    res.status(403).json({ error: ErrorCodes.UNAUTHORIZED });
+    return;
   }
 
   const parts = authHeader.split(" ");
   if (parts.length !== 2 || parts[0] !== "Bearer") {
-    throw new Error(ErrorCodes.UNAUTHORIZED);
+    res.status(403).json({ error: ErrorCodes.UNAUTHORIZED });
+    return;
   }
 
   const authToken = parts[1];
 
-  const decoded = jwt.verify(authToken, ENV.JWT_SECRET); // throws error if incorrect
-  const parsedDecoded = JwtBody.parse(decoded);
-  const userId = parsedDecoded.userId.toLowerCase();
-
-  return userId;
-}
+  try {
+    const decoded = jwt.verify(authToken, ENV.JWT_SECRET);
+    const parsedDecoded = JwtBody.parse(decoded);
+    return parsedDecoded.userId.toLowerCase();
+  } catch {
+    res.status(403).json({ error: ErrorCodes.UNAUTHORIZED });
+    return undefined;
+  };
+};
 
 const idTypes = ["userId", "articleId", "organisationId"] as const;
 type IdType = (typeof idTypes)[number];
@@ -46,4 +55,14 @@ export function generateRandomId(idType: IdType): string {
     result += chars.charAt(Math.floor(Math.random() * chars.length));
   }
   return `0x${result}`.toLowerCase();
+}
+
+export function generateDiscordTimestamp(
+  date: Date | number,
+  style: "t" | "T" | "d" | "D" | "f" | "F" | "R" = "f"
+): string {
+  const timestamp = Math.floor(
+    date instanceof Date ? date.getTime() / 1000 : date / 1000
+  );
+  return `<t:${timestamp}:${style}>`;
 }

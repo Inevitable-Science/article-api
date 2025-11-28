@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import z from "zod";
 
 import UserModel from "../../database/userSchema";
-import { generateRandomId, VerifyJWT } from "../../utils/utils";
+import { generateDiscordTimestamp, generateRandomId, VerifyJWT } from "../../utils/utils";
 import OrganisationModel from "../../database/organisationSchema";
 import ArticleModel, {
   Article,
@@ -10,6 +10,7 @@ import ArticleModel, {
 } from "../../database/articleSchema";
 import { ErrorCodes } from "../../utils/errors/errors";
 import { handleServerError } from "../../utils/errors/errorHandler";
+import logAction, { Embed } from "../../utils/logAction";
 
 export async function fetchArticleHandler(
   req: Request,
@@ -17,8 +18,7 @@ export async function fetchArticleHandler(
 ): Promise<void> {
   try {
     const { articleId } = req.params;
-    const authHeader = req.headers.authorization;
-    const userId = VerifyJWT(authHeader);
+    const userId = VerifyJWT(req, res);
 
     const parsed = z.string().safeParse(articleId);
     if (!parsed.success) {
@@ -147,8 +147,7 @@ export async function createArticleHandler(
   res: Response
 ): Promise<void> {
   try {
-    const authHeader = req.headers.authorization;
-    const userId = VerifyJWT(authHeader);
+    const userId = VerifyJWT(req, res);
 
     const parsed = CreateEditBody.safeParse(req.body);
     if (!parsed.success) {
@@ -221,6 +220,20 @@ export async function createArticleHandler(
 
     await ArticleModel.create(parsedArticle);
 
+    const constructedEmbed: Embed = {
+      title: "Article Created",
+      description: `${data.title} Created ${generateDiscordTimestamp(new Date(), "R")}`,
+      author: {
+        name: `${user.userMetadata.username} - ${user.userId}`,
+        icon_url: user.userMetadata.profilePicture
+      }
+    };
+
+    await logAction({
+      action: "logAction",
+      embed: constructedEmbed
+    });
+
     res
       .status(200)
       .json({ message: "Successfully Created Article", articleId: uniqueId });
@@ -235,9 +248,8 @@ export async function editArticleHandler(
   res: Response
 ): Promise<void> {
   try {
-    const authHeader = req.headers.authorization;
     const { articleId } = req.params;
-    const userId = VerifyJWT(authHeader);
+    const userId = VerifyJWT(req, res);
 
     const parsed = CreateEditBody.safeParse(req.body);
     const parsedArticleId = z.string().safeParse(articleId);
@@ -309,11 +321,29 @@ export async function editArticleHandler(
       content: data.content,
     };
 
-    const parsedArticle = ArticleSchemaZ.parse(constructedArticle);
+    const parsedArticle = ArticleSchemaZ.safeParse(constructedArticle);
+    if (!parsedArticle.success) {
+      res.status(400).json({ error: ErrorCodes.BAD_REQUEST });
+      return
+    };
     await ArticleModel.updateOne(
       { articleId: article.articleId },
-      { $set: parsedArticle }
+      { $set: parsedArticle.data }
     );
+
+    const constructedEmbed: Embed = {
+      title: "Article Edited",
+      description: `${data.title} Edited ${generateDiscordTimestamp(new Date(), "R")}`,
+      author: {
+        name: `${user.userMetadata.username} - ${user.userId}`,
+        icon_url: user.userMetadata.profilePicture
+      }
+    };
+
+    await logAction({
+      action: "logAction",
+      embed: constructedEmbed
+    });
 
     res.status(200).json({ message: "Successfully Saved Changes" });
     return;
@@ -327,8 +357,7 @@ export async function deleteArticleHandler(
   res: Response
 ): Promise<void> {
   try {
-    const authHeader = req.headers.authorization;
-    const userId = VerifyJWT(authHeader);
+    const userId = VerifyJWT(req, res);
 
     const parsedArticle = z.string().safeParse(req.body.articleId);
     if (!parsedArticle.success) {
@@ -376,6 +405,20 @@ export async function deleteArticleHandler(
 
     article.displayRules.deleted = true;
     await article.save();
+
+    const constructedEmbed: Embed = {
+      title: "Article Deleted",
+      description: `${article.title} Deleted ${generateDiscordTimestamp(new Date(), "R")}`,
+      author: {
+        name: `${user.userMetadata.username} - ${user.userId}`,
+        icon_url: user.userMetadata.profilePicture
+      }
+    };
+
+    await logAction({
+      action: "logAction",
+      embed: constructedEmbed
+    });
 
     res.status(200).json({ message: "Article Successfully Deleted" });
     return;

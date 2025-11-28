@@ -1,5 +1,6 @@
 import express, { NextFunction, Request, Response } from "express";
-require("dotenv").config();
+import dotenv from "dotenv";
+dotenv.config();
 
 import rateLimit from "express-rate-limit";
 import { RateLimiterMemory } from "rate-limiter-flexible";
@@ -12,11 +13,11 @@ import { S3Client } from "@aws-sdk/client-s3";
 import mongoose from "mongoose";
 
 import { ENV } from "./utils/env";
+import { ErrorCodes } from "./utils/errors/errors";
 import { uploadImageHandler } from "./routes/upload";
 import userRouter from "./routes/user/userRouter";
 import articleRouter from "./routes/article/articleRouter";
 import organisationRouter from "./routes/organisation/organisationRouter";
-import { ErrorCodes } from "./utils/errors/errors";
 
 const app = express();
 app.use(express.json());
