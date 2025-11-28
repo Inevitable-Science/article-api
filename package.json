@@ -33,6 +33,7 @@
     "@types/lodash": "^4.17.21",
     "@types/multer": "^2.0.0",
     "@types/node": "^24.10.1",
+    "eslint": "^9.39.1",
     "prettier": "^3.7.1",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.9.3"
