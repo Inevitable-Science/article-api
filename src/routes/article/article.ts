@@ -8,6 +8,8 @@ import ArticleModel, {
   Article,
   ArticleSchemaZ,
 } from "../../database/articleSchema";
+import { ErrorCodes } from "../../utils/errors/errors";
+import { handleServerError } from "../../utils/errors/errorHandler";
 
 export async function fetchArticleHandler(
   req: Request,
@@ -20,7 +22,7 @@ export async function fetchArticleHandler(
 
     const parsed = z.string().safeParse(articleId);
     if (!parsed.success) {
-      res.status(400).json({ error: "Bad Request" });
+      res.status(400).json({ error: ErrorCodes.BAD_REQUEST });
       return;
     }
 
@@ -30,7 +32,7 @@ export async function fetchArticleHandler(
     ]);
 
     if (!user || !article || article.displayRules.deleted) {
-      res.status(403).json({ error: "Component Not Found" });
+      res.status(403).json({ error: ErrorCodes.ELEMENT_NOT_FOUND });
       return;
     }
 
@@ -46,7 +48,7 @@ export async function fetchArticleHandler(
       if (!articleOrg) {
         res
           .status(403)
-          .json({ error: "User Does Not Have Access To This Organisation" });
+          .json({ error: ErrorCodes.FORBIDDEN });
         return;
       }
 
@@ -63,7 +65,7 @@ export async function fetchArticleHandler(
       ) {
         res
           .status(403)
-          .json({ error: "User Does Not Have Access To This Organisation" });
+          .json({ error: ErrorCodes.FORBIDDEN });
         return;
       }
     } else {
@@ -71,7 +73,7 @@ export async function fetchArticleHandler(
         organisationId: article.organisationId,
       });
 
-      if (!articleOrg) throw new Error("Organisation Not Found");
+      if (!articleOrg) throw new Error(ErrorCodes.ELEMENT_NOT_FOUND);
 
       userPermissions = {
         isAdmin: true,
@@ -120,11 +122,9 @@ export async function fetchArticleHandler(
     res.status(200).json(constructedArticle);
     return;
   } catch (err) {
-    console.log(err);
-    res.status(500).json({ error: "Internal Server Error" });
-    return;
-  }
-}
+    await handleServerError(res, err);
+  };
+};
 
 const CreateEditBody = z.object({
   title: z.string(),
@@ -152,14 +152,14 @@ export async function createArticleHandler(
 
     const parsed = CreateEditBody.safeParse(req.body);
     if (!parsed.success) {
-      res.status(400).json({ error: "Bad Request" });
+      res.status(400).json({ error: ErrorCodes.BAD_REQUEST });
       return;
     }
     const data = parsed.data;
 
     const user = await UserModel.findOne({ userId });
     if (!user) {
-      res.status(404).json({ error: "User Not Found" });
+      res.status(404).json({ error: ErrorCodes.USER_NOT_FOUND });
       return;
     }
 
@@ -171,7 +171,7 @@ export async function createArticleHandler(
     );
 
     if (!userHasOrg && !user.isTopLevelAdmin) {
-      res.status(403).json({ error: "User Is Not In This Organisation" });
+      res.status(403).json({ error: ErrorCodes.FORBIDDEN });
       return;
     }
 
@@ -184,7 +184,7 @@ export async function createArticleHandler(
         !userPermissions ||
         (!userPermissions.isAdmin && !userPermissions.canCreate)
       ) {
-        res.status(403).json({ error: "User Does Not Have Create Permission" });
+        res.status(403).json({ error: ErrorCodes.FORBIDDEN });
         return;
       }
     }
@@ -213,7 +213,12 @@ export async function createArticleHandler(
       },
     };
 
-    const parsedArticle = ArticleSchemaZ.parse(article);
+    const parsedArticle = ArticleSchemaZ.safeParse(article);
+    if (!parsedArticle.success) {
+      res.status(400).json({ error: ErrorCodes.BAD_REQUEST });
+      return;
+    };
+
     await ArticleModel.create(parsedArticle);
 
     res
@@ -221,9 +226,7 @@ export async function createArticleHandler(
       .json({ message: "Successfully Created Article", articleId: uniqueId });
     return;
   } catch (err) {
-    console.log(err);
-    res.status(500).json({ error: "Internal Server Error" });
-    return;
+    await handleServerError(res, err);
   }
 }
 
@@ -240,7 +243,7 @@ export async function editArticleHandler(
     const parsedArticleId = z.string().safeParse(articleId);
 
     if (!parsed.success || !parsedArticleId.success) {
-      res.status(400).json({ error: "Bad Request" });
+      res.status(400).json({ error: ErrorCodes.BAD_REQUEST });
       return;
     }
     const data = parsed.data;
@@ -251,7 +254,7 @@ export async function editArticleHandler(
     ]);
 
     if (!user || !article || article.displayRules.deleted) {
-      res.status(404).json({ error: "Component Not Found" });
+      res.status(404).json({ error: ErrorCodes.ELEMENT_NOT_FOUND });
       return;
     }
 
@@ -263,7 +266,7 @@ export async function editArticleHandler(
     );
 
     if (!userHasOrg && !user.isTopLevelAdmin) {
-      res.status(403).json({ error: "User Is Not In This Organisation" });
+      res.status(403).json({ error: ErrorCodes.FORBIDDEN });
       return;
     }
 
@@ -276,7 +279,7 @@ export async function editArticleHandler(
         !userPermissions ||
         (!userPermissions.isAdmin && !userPermissions.canEdit)
       ) {
-        res.status(403).json({ error: "User Does Not Have Create Permission" });
+        res.status(403).json({ error: ErrorCodes.FORBIDDEN });
         return;
       }
     }
@@ -315,9 +318,7 @@ export async function editArticleHandler(
     res.status(200).json({ message: "Successfully Saved Changes" });
     return;
   } catch (err) {
-    console.log(err);
-    res.status(500).json({ error: "Internal Server Error" });
-    return;
+    await handleServerError(res, err);
   }
 }
 
@@ -331,7 +332,7 @@ export async function deleteArticleHandler(
 
     const parsedArticle = z.string().safeParse(req.body.articleId);
     if (!parsedArticle.success) {
-      res.status(400).json({ error: "Invalid Article ID" });
+      res.status(400).json({ error: ErrorCodes.BAD_REQUEST });
       return;
     }
     const articleId = parsedArticle.data.toLowerCase();
@@ -342,7 +343,7 @@ export async function deleteArticleHandler(
     ]);
 
     if (!user || !article || article.displayRules.deleted) {
-      res.status(404).json({ error: "User Or Article Not Found" });
+      res.status(404).json({ error: ErrorCodes.ELEMENT_NOT_FOUND });
       return;
     }
 
@@ -357,7 +358,7 @@ export async function deleteArticleHandler(
       if (!organisation) {
         res
           .status(403)
-          .json({ error: "User Is Not In Designated Organisation" });
+          .json({ error: ErrorCodes.FORBIDDEN });
         return;
       }
       const userPermissions = organisation.users.find(
@@ -368,7 +369,7 @@ export async function deleteArticleHandler(
         !userPermissions ||
         (!userPermissions.isAdmin && !userPermissions.canDelete)
       ) {
-        res.status(403).json({ error: "User Cannot Delete Articles" });
+        res.status(403).json({ error: ErrorCodes.FORBIDDEN });
         return;
       }
     }
@@ -379,8 +380,6 @@ export async function deleteArticleHandler(
     res.status(200).json({ message: "Article Successfully Deleted" });
     return;
   } catch (err) {
-    console.log(err);
-    res.status(500).json({ error: "Internal Server Error" });
-    return;
+    await handleServerError(res, err);
   }
 }

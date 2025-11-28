@@ -11,6 +11,8 @@ import OrganisationModel, {
 
 import { generateRandomId, VerifyJWT } from "../../utils/utils";
 import { ENV } from "../../utils/env";
+import { ErrorCodes } from "../../utils/errors/errors";
+import { handleServerError } from "../../utils/errors/errorHandler";
 
 
 export async function getUserHandler(
@@ -24,7 +26,7 @@ export async function getUserHandler(
     const user = await UserModel.findOne({ userId });
 
     if (!user) {
-      res.status(404).json({ error: "user not found" });
+      res.status(404).json({ error: ErrorCodes.USER_NOT_FOUND });
       return;
     }
 
@@ -138,11 +140,9 @@ export async function getUserHandler(
     res.status(200).json(response);
     return;
   } catch (err) {
-    console.log(err);
-    res.status(500).json({ error: "Internal server error" });
-    return;
-  }
-}
+    await handleServerError(res, err);
+  };
+};
 
 export async function getAllUserHandler(
   req: Request,
@@ -154,12 +154,12 @@ export async function getAllUserHandler(
 
     const user = await UserModel.findOne({ userId });
     if (!user) {
-      res.status(404).json({ error: "user not found" });
+      res.status(404).json({ error: ErrorCodes.USER_NOT_FOUND });
       return;
     }
 
     if (!user.isTopLevelAdmin) {
-      res.status(403).json({ error: "MISSING_PERMS" });
+      res.status(403).json({ error: ErrorCodes.FORBIDDEN });
       return;
     }
 
@@ -176,11 +176,9 @@ export async function getAllUserHandler(
     res.status(200).json(response);
     return;
   } catch (err) {
-    console.log(err);
-    res.status(500).json({ error: "Internal server error" });
-    return;
-  }
-}
+    await handleServerError(res, err);
+  };
+};
 
 const CreateBody = z.object({
   overwritePassword: z.string().optional(),
@@ -209,7 +207,7 @@ export async function createUserHandler(
 
     const parsed = CreateBody.safeParse(req.body);
     if (!parsed.success) {
-      res.status(400).json({ error: "Invalid Body" });
+      res.status(400).json({ error: ErrorCodes.BAD_REQUEST });
       return;
     }
 
@@ -225,17 +223,17 @@ export async function createUserHandler(
       ]);
 
       if (!user) {
-        res.status(404).json({ error: "User Not Found" });
+        res.status(404).json({ error: ErrorCodes.USER_NOT_FOUND });
         return;
       }
 
       if (!user.isTopLevelAdmin) {
-        res.status(403).json({ error: "You Cannot Create New Users" });
+        res.status(403).json({ error: ErrorCodes.FORBIDDEN });
         return;
       }
 
       if (isExistingUser) {
-        res.status(400).json({ error: "User Already Exists" });
+        res.status(400).json({ error: ErrorCodes.BAD_REQUEST });
         return;
       }
     } else {
@@ -244,7 +242,7 @@ export async function createUserHandler(
       });
 
       if (existingUser) {
-        res.status(400).json({ error: "User Already Exists" });
+        res.status(400).json({ error: ErrorCodes.BAD_REQUEST });
         return;
       }
     }
@@ -278,10 +276,15 @@ export async function createUserHandler(
       },
     };
 
-    const parsedNewUser = UserSchemaZ.parse(newUser);
-    const createdUser = await UserModel.create(parsedNewUser);
+    const parsedNewUser = UserSchemaZ.safeParse(newUser);
+    if (!parsedNewUser) {
+      res.status(400).json({ error: ErrorCodes.BAD_REQUEST });
+      return;
+    };
 
-    if (!createdUser) throw new Error();
+    const createdUser = await UserModel.create(parsedNewUser.data);
+
+    if (!createdUser) throw new Error(ErrorCodes.DATABASE_ERROR);
 
     const newUserOrgs = data.user.organisations;
 
@@ -325,11 +328,9 @@ export async function createUserHandler(
     res.status(200).json({ message: "Successfully created new user" });
     return;
   } catch (err) {
-    console.log(err);
-    res.status(500).json({ error: "Internal server error" });
-    return;
-  }
-}
+    await handleServerError(res, err);
+  };
+};
 
 const EditBody = z.object({
   username: z.string().min(5),
@@ -351,7 +352,7 @@ export async function editUserHandler(
 
     const parsed = EditBody.safeParse(req.body);
     if (!parsed.success) {
-      res.status(400).json({ error: "Invalid Request" });
+      res.status(400).json({ error: ErrorCodes.BAD_REQUEST });
       return;
     }
 
@@ -359,7 +360,7 @@ export async function editUserHandler(
     const user = await UserModel.findOne({ userId: userId });
 
     if (!user) {
-      res.status(404).json({ error: "User not found" });
+      res.status(404).json({ error: ErrorCodes.USER_NOT_FOUND });
       return;
     }
 
@@ -369,8 +370,6 @@ export async function editUserHandler(
     res.status(200).json({ message: "User Changes Saved" });
     return;
   } catch (err) {
-    console.log(err);
-    res.status(500).json({ error: "Internal Server Error" });
-    return;
-  }
-}
+    await handleServerError(res, err);
+  };
+};

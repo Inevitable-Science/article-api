@@ -2,6 +2,7 @@ import jwt from "jsonwebtoken";
 import z from "zod";
 
 import { ENV } from "./env";
+import { ErrorCodes } from "./errors/errors";
 
 export const JwtBody = z.object({
   userId: z.string(),
@@ -11,12 +12,12 @@ export type JwtBodyType = z.infer<typeof JwtBody>;
 
 export function VerifyJWT(authHeader: string | undefined): string {
   if (!authHeader) {
-    throw new Error();
+    throw new Error(ErrorCodes.UNAUTHORIZED);
   }
 
   const parts = authHeader.split(" ");
   if (parts.length !== 2 || parts[0] !== "Bearer") {
-    throw new Error();
+    throw new Error(ErrorCodes.UNAUTHORIZED);
   }
 
   const authToken = parts[1];

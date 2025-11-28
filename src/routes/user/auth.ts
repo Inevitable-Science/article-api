@@ -6,6 +6,8 @@ import jwt from "jsonwebtoken";
 import UserModel from "../../database/userSchema";
 import { ENV } from "../../utils/env";
 import { JwtBodyType } from "../../utils/utils";
+import { ErrorCodes } from "../../utils/errors/errors";
+import { handleServerError } from "../../utils/errors/errorHandler";
 
 
 export async function getNonceHandler(
@@ -21,7 +23,7 @@ export async function getNonceHandler(
       .safeParse(address);
 
     if (!parsedAddress.success) {
-      res.status(400).json({ error: "Invalid request" });
+      res.status(400).json({ error: ErrorCodes.BAD_REQUEST });
       return;
     }
 
@@ -29,17 +31,16 @@ export async function getNonceHandler(
     const user = await UserModel.findOne({ walletAddress });
 
     if (!user) {
-      res.status(404).json({ error: "User not found" });
+      res.status(404).json({ error: ErrorCodes.USER_NOT_FOUND });
       return;
     }
 
     res.status(200).json({ nonce: user.currentNonce });
     return;
-  } catch (err: unknown) {
-    res.status(500).json({ error: `Error fetching user data: ${err}` });
-    return;
-  }
-}
+  } catch (err) {
+    await handleServerError(res, err);
+  };
+};
 
 const AuthHandlerBody = z.object({
   address: z.string(),
@@ -48,15 +49,20 @@ const AuthHandlerBody = z.object({
 
 export async function loginHandler(req: Request, res: Response): Promise<void> {
   try {
-    const parsed = AuthHandlerBody.parse(req.body);
-    const { address, signature } = parsed;
+    const parsed = AuthHandlerBody.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: ErrorCodes.BAD_REQUEST });
+      return;
+    };
+
+    const { address, signature } = parsed.data;
 
     // Find user by wallet address
     const user = await UserModel.findOne({
       walletAddress: address.toLowerCase(),
     });
     if (!user) {
-      res.status(404).json({ error: "User not found" });
+      res.status(404).json({ error: ErrorCodes.USER_NOT_FOUND });
       return;
     }
 
@@ -72,10 +78,10 @@ export async function loginHandler(req: Request, res: Response): Promise<void> {
     user.currentNonce += 1;
     const savedNonce = await user.save();
 
-    if (!savedNonce) throw new Error();
+    if (!savedNonce) throw new Error(ErrorCodes.DATABASE_ERROR);
 
     if (!valid) {
-      res.status(403).json({ error: "Could not verify signature" });
+      res.status(403).json({ error: ErrorCodes.UNAUTHORIZED });
       return;
     }
 
@@ -85,8 +91,6 @@ export async function loginHandler(req: Request, res: Response): Promise<void> {
     res.status(200).json({ key: userToken });
     return;
   } catch (err) {
-    console.log(err);
-    res.status(500).json({ error: `Error fetching user data` });
-    return;
-  }
-}
+    await handleServerError(res, err);
+  };
+};

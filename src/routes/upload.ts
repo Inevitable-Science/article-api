@@ -9,6 +9,8 @@ import UserModel from "../database/userSchema";
 import { s3Client } from "../index";
 import { ENV } from "../utils/env";
 import { JwtBody } from "../utils/utils";
+import { ErrorCodes } from "../utils/errors/errors";
+import { handleServerError } from "../utils/errors/errorHandler";
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -29,15 +31,15 @@ export async function uploadImageHandler(
   upload.single("file")(req, res, async (err) => {
     if (err) {
       if (err instanceof multer.MulterError) {
-        res.status(400).json({ error: err.message });
+        res.status(400).json({ error: ErrorCodes.UPLOAD_ERROR });
         return;
       }
-      res.status(400).json({ error: err.message || "File upload error" });
+      res.status(400).json({ error: ErrorCodes.UPLOAD_ERROR });
       return;
     }
 
     if (!req.file) {
-      res.status(400).json({ error: "No file provided" });
+      res.status(400).json({ error: ErrorCodes.UPLOAD_NO_FILE });
       return;
     }
 
@@ -46,14 +48,14 @@ export async function uploadImageHandler(
       const authHeader = req.headers.authorization;
 
       if (!authHeader) {
-        return res.status(403).json({ error: "forbidden" });
+        return res.status(403).json({ error: ErrorCodes.UNAUTHORIZED });
       }
 
       const parts = authHeader.split(" ");
       if (parts.length !== 2 || parts[0] !== "Bearer") {
         return res
           .status(401)
-          .json({ error: "Invalid Authorization header format" });
+          .json({ error: ErrorCodes.BAD_REQUEST });
       }
 
       const authToken = parts[1];
@@ -64,7 +66,7 @@ export async function uploadImageHandler(
       const user = await UserModel.findOne({ userId: parsedDecoded.userId });
 
       if (!user) {
-        return res.status(403).json({ error: "user not found" });
+        return res.status(403).json({ error: ErrorCodes.USER_NOT_FOUND });
       }
 
       if (
@@ -72,7 +74,7 @@ export async function uploadImageHandler(
         uploadType !== "article" &&
         uploadType !== "organisation"
       ) {
-        return res.status(400).json({ error: "Upload type must be specified" });
+        return res.status(400).json({ error: ErrorCodes.BAD_REQUEST });
       }
 
       const file = req.file;
@@ -101,12 +103,8 @@ export async function uploadImageHandler(
         success: true,
         url: cloudfrontUrl,
       });
-    } catch (error: any) {
-      console.error("S3 upload failed:", error);
-      res.status(500).json({
-        error: "Failed to upload image",
-        details: error.message,
-      });
+    } catch (err) {
+      await handleServerError(res, err);
     }
   });
 }

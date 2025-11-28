@@ -1,4 +1,6 @@
 import { Request, Response } from "express";
+import z from "zod";
+
 import ArticleModel from "../../database/articleSchema";
 import UserModel from "../../database/userSchema";
 import OrganisationModel, {
@@ -8,8 +10,8 @@ import OrganisationModel, {
 } from "../../database/organisationSchema";
 
 import { generateRandomId, VerifyJWT } from "../../utils/utils";
-
-import z from "zod";
+import { ErrorCodes } from "../../utils/errors/errors";
+import { handleServerError } from "../../utils/errors/errorHandler";
 
 export async function fetchOrgHandler(
   req: Request,
@@ -27,7 +29,7 @@ export async function fetchOrgHandler(
     ]);
 
     if (!user || !organisation) {
-      res.status(404).json({ error: "Component Not Found" });
+      res.status(404).json({ error: ErrorCodes.ELEMENT_NOT_FOUND });
       return;
     }
 
@@ -35,7 +37,7 @@ export async function fetchOrgHandler(
       (u) => u.userId === user.userId
     );
     if (!user.isTopLevelAdmin && !userIsOrgAdmin?.isAdmin) {
-      res.status(403).json({ error: "User Lacks Permissions" });
+      res.status(403).json({ error: ErrorCodes.FORBIDDEN });
       return;
     }
 
@@ -105,9 +107,7 @@ export async function fetchOrgHandler(
     res.status(200).json(constructedOrg);
     return;
   } catch (err) {
-    console.log(err);
-    res.status(500).json({ error: "Internal server error" });
-    return;
+    await handleServerError(res, err);
   }
 }
 
@@ -137,12 +137,12 @@ export async function createOrgHandler(
     const parsed = CreateBody.parse(req.body);
 
     if (!user) {
-      res.status(404).json({ error: "User Not Found" });
+      res.status(404).json({ error: ErrorCodes.USER_NOT_FOUND });
       return;
     }
 
     if (!user.isTopLevelAdmin) {
-      res.status(403).json({ error: "User Is Not An Admin" });
+      res.status(403).json({ error: ErrorCodes.FORBIDDEN });
       return;
     }
 
@@ -159,7 +159,7 @@ export async function createOrgHandler(
     const hasDuplicates =
       new Set(parsed.users.map((u) => u.userId)).size !== parsed.users.length;
     if (hasDuplicates) {
-      res.status(400).json({ error: "Dupelicate Users" });
+      res.status(400).json({ error: ErrorCodes.DUPLICATE_ERROR });
       return;
     }
 
@@ -171,14 +171,12 @@ export async function createOrgHandler(
     const parsedOrg = OrganisationSchemaZ.parse(constructedOrg);
     const createdOrg = await OrganisationModel.create(parsedOrg);
 
-    if (!createdOrg) throw new Error("Could Not Create Organisation");
+    if (!createdOrg) throw new Error(ErrorCodes.DATABASE_ERROR);
 
     res.status(200).json({ organisation: createdOrg });
     return;
   } catch (err) {
-    console.log(err);
-    res.status(500).json({ error: "Internal server error" });
-    return;
+    await handleServerError(res, err);
   }
 }
 
@@ -199,20 +197,20 @@ export async function editOrgHandler(
     ]);
 
     if (!user || !organisation) {
-      res.status(404).json({ error: "Component Not Found" });
+      res.status(404).json({ error: ErrorCodes.ELEMENT_NOT_FOUND });
       return;
     }
 
     const userRoles = organisation.users.find((u) => u.userId === user.userId);
     if (!user.isTopLevelAdmin && !userRoles?.isAdmin) {
-      res.status(403).json({ error: "User Is Not An Admin" });
+      res.status(403).json({ error: ErrorCodes.FORBIDDEN });
       return;
     }
 
     const hasDuplicates =
       new Set(data.users.map((u) => u.userId)).size !== data.users.length;
     if (hasDuplicates) {
-      res.status(400).json({ error: "Dupelicate Users" });
+      res.status(400).json({ error: ErrorCodes.DUPLICATE_ERROR });
       return;
     }
 
@@ -222,8 +220,6 @@ export async function editOrgHandler(
     res.status(200).json({ organisation: data });
     return;
   } catch (err) {
-    console.log(err);
-    res.status(500).json({ error: "Internal server error" });
-    return;
-  }
-}
+    await handleServerError(res, err);
+  };
+};

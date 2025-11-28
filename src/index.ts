@@ -16,6 +16,7 @@ import { uploadImageHandler } from "./routes/upload";
 import userRouter from "./routes/user/userRouter";
 import articleRouter from "./routes/article/articleRouter";
 import organisationRouter from "./routes/organisation/organisationRouter";
+import { ErrorCodes } from "./utils/errors/errors";
 
 const app = express();
 app.use(express.json());
@@ -53,7 +54,7 @@ const globalRateLimit = async (
     next();
   } catch {
     res.status(429).json({
-      error: "Server rate limit exceeded (global limit).",
+      error: ErrorCodes.RATE_LIMIT,
     });
   }
 };
