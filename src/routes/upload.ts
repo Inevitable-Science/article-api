@@ -62,7 +62,7 @@ export async function uploadImageHandler(
 
       const file = req.file;
       const ext = path.extname(file.originalname) || ".jpg";
-      const key = `/article/${uploadType}/${uuidv4()}${ext}`;
+      const key = `article/${uploadType}/${uuidv4()}${ext}`;
 
       // Upload to S3
       await s3Client.send(
