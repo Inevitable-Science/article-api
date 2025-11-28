@@ -218,7 +218,7 @@ export async function createArticleHandler(
       return;
     };
 
-    await ArticleModel.create(parsedArticle);
+    await ArticleModel.create(parsedArticle.data);
 
     const constructedEmbed: Embed = {
       title: "Article Created",

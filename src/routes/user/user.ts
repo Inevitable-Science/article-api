@@ -278,7 +278,7 @@ export async function createUserHandler(
     };
 
     const parsedNewUser = UserSchemaZ.safeParse(newUser);
-    if (!parsedNewUser) {
+    if (!parsedNewUser.success) {
       res.status(400).json({ error: ErrorCodes.BAD_REQUEST });
       return;
     };
