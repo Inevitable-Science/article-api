@@ -40,7 +40,7 @@ This API is modular, *somewhat* scalable, and follows clean architecture princip
 
 ### Clone the repository
 ```bash
-git clone https://github.com/your-username/article-api.git
+git clone https://github.com/Inevitable-Science/article-api.git
 cd server
 ```
 
@@ -91,7 +91,7 @@ npm start
 
 ---
 
-###🛡️ Error Handling
+### 🛡️ Error Handling
 
 The API uses a centralized error handler that:
 - Returns consistent JSON error responses
