@@ -2,11 +2,19 @@ import z from "zod";
 import UserModel from "../../database/userSchema";
 import { generateRandomId, VerifyJWT } from "../../utils/utils";
 import { Request, Response, urlencoded } from "express";
-import OrganisationModel, { Organisation, UserPermissions } from "../../database/organisationSchema";
-import ArticleModel, { Article, ArticleSchemaZ } from "../../database/articleSchema";
+import OrganisationModel, {
+  Organisation,
+  UserPermissions,
+} from "../../database/organisationSchema";
+import ArticleModel, {
+  Article,
+  ArticleSchemaZ,
+} from "../../database/articleSchema";
 
-
-export async function fetchArticleHandler(req: Request, res: Response): Promise<void> {
+export async function fetchArticleHandler(
+  req: Request,
+  res: Response
+): Promise<void> {
   try {
     const { articleId } = req.params;
     const authHeader = req.headers.authorization;
@@ -16,7 +24,7 @@ export async function fetchArticleHandler(req: Request, res: Response): Promise<
     if (!parsed.success) {
       res.status(400).json({ error: "Bad Request" });
       return;
-    };
+    }
 
     const [user, article] = await Promise.all([
       UserModel.findOne({ userId }),
@@ -26,7 +34,7 @@ export async function fetchArticleHandler(req: Request, res: Response): Promise<
     if (!user || !article || article.displayRules.deleted) {
       res.status(403).json({ error: "Component Not Found" });
       return;
-    };
+    }
 
     let articleOrg;
     let userPermissions;
@@ -34,27 +42,36 @@ export async function fetchArticleHandler(req: Request, res: Response): Promise<
     if (!user.isTopLevelAdmin) {
       articleOrg = await OrganisationModel.findOne({
         organisationId: article.organisationId,
-        "users.userId": user.userId
+        "users.userId": user.userId,
       });
 
       if (!articleOrg) {
-        res.status(403).json({ error: "User Does Not Have Access To This Organisation"});
+        res
+          .status(403)
+          .json({ error: "User Does Not Have Access To This Organisation" });
         return;
-      };
+      }
 
-      userPermissions = articleOrg.users.find(u => u.userId === user.userId);
+      userPermissions = articleOrg.users.find((u) => u.userId === user.userId);
 
-      if (!userPermissions || !(
-        userPermissions.isAdmin ||
-        userPermissions.canCreate ||
-        userPermissions.canDelete ||
-        userPermissions.canEdit
-      )) {
-        res.status(403).json({ error: "User Does Not Have Access To This Organisation" });
+      if (
+        !userPermissions ||
+        !(
+          userPermissions.isAdmin ||
+          userPermissions.canCreate ||
+          userPermissions.canDelete ||
+          userPermissions.canEdit
+        )
+      ) {
+        res
+          .status(403)
+          .json({ error: "User Does Not Have Access To This Organisation" });
         return;
-      };
+      }
     } else {
-      articleOrg = await OrganisationModel.findOne({ organisationId: article.organisationId });
+      articleOrg = await OrganisationModel.findOne({
+        organisationId: article.organisationId,
+      });
 
       if (!articleOrg) throw new Error("Organisation Not Found");
 
@@ -64,20 +81,19 @@ export async function fetchArticleHandler(req: Request, res: Response): Promise<
         canEdit: true,
         canDelete: true,
       };
-    };
-
+    }
 
     const [author, editors] = await Promise.all([
       await UserModel.findOne({ userId: article.metadata.author }),
       UserModel.find(
         { userId: { $in: article.metadata.editors } },
         { userMetadata: 1, userId: 1 }
-      )
+      ),
     ]);
 
-    const editorProfiles = editors.map(e => ({
+    const editorProfiles = editors.map((e) => ({
       username: e.userMetadata.username,
-      profilePicture: e.userMetadata.profilePicture
+      profilePicture: e.userMetadata.profilePicture,
     }));
 
     const constructedArticle = {
@@ -91,29 +107,26 @@ export async function fetchArticleHandler(req: Request, res: Response): Promise<
       organisation: {
         organisationName: articleOrg.organisationName,
         organisationId: articleOrg.organisationId,
-        userPerms: {...userPermissions}
+        userPerms: { ...userPermissions },
       },
       metadata: {
         dateWritten: article.metadata.dateWritten,
         author: {
           username: author?.userMetadata.username,
-          profilePicture: author?.userMetadata.profilePicture
+          profilePicture: author?.userMetadata.profilePicture,
         },
-        editors: editorProfiles
-      }
+        editors: editorProfiles,
+      },
     };
 
     res.status(200).json(constructedArticle);
     return;
-
   } catch (err) {
     console.log(err);
     res.status(500).json({ error: "Internal Server Error" });
     return;
   }
-};
-
-
+}
 
 const CreateEditBody = z.object({
   title: z.string(),
@@ -131,7 +144,10 @@ const CreateEditBody = z.object({
   }),
 });
 
-export async function createArticleHandler(req: Request, res: Response): Promise<void> {
+export async function createArticleHandler(
+  req: Request,
+  res: Response
+): Promise<void> {
   try {
     const authHeader = req.headers.authorization;
     const userId = VerifyJWT(authHeader);
@@ -140,50 +156,57 @@ export async function createArticleHandler(req: Request, res: Response): Promise
     if (!parsed.success) {
       res.status(400).json({ error: "Bad Request" });
       return;
-    };
+    }
     const data = parsed.data;
 
     const user = await UserModel.findOne({ userId });
     if (!user) {
       res.status(404).json({ error: "User Not Found" });
       return;
-    };
+    }
 
-
-    const userOrgs = await OrganisationModel.find({ "users.userId": user.userId });
-    const userHasOrg = userOrgs.find(org => org.organisationId === data.organisationId);
+    const userOrgs = await OrganisationModel.find({
+      "users.userId": user.userId,
+    });
+    const userHasOrg = userOrgs.find(
+      (org) => org.organisationId === data.organisationId
+    );
 
     if (!userHasOrg && !user.isTopLevelAdmin) {
       res.status(403).json({ error: "User Is Not In This Organisation" });
       return;
-    };
+    }
 
     if (!user.isTopLevelAdmin) {
-      const userPermissions = userHasOrg?.users.find(u => u.userId === user.userId);
+      const userPermissions = userHasOrg?.users.find(
+        (u) => u.userId === user.userId
+      );
 
-      if (!userPermissions || (!userPermissions.isAdmin && !userPermissions.canCreate)) {
+      if (
+        !userPermissions ||
+        (!userPermissions.isAdmin && !userPermissions.canCreate)
+      ) {
         res.status(403).json({ error: "User Does Not Have Create Permission" });
         return;
-      };
-    };
+      }
+    }
 
     let uniqueId;
     while (!uniqueId) {
       const id = generateRandomId("articleId");
-      
+
       const idExsists = await ArticleModel.findOne({ articleId: id });
       if (!idExsists) {
         uniqueId = id;
-      };
+      }
     }
 
-    
     const article: Article = {
       ...data,
       articleId: uniqueId,
       displayRules: {
         ...data.displayRules,
-        deleted: false
+        deleted: false,
       },
       metadata: {
         dateWritten: new Date(),
@@ -194,18 +217,22 @@ export async function createArticleHandler(req: Request, res: Response): Promise
 
     const parsedArticle = ArticleSchemaZ.parse(article);
     await ArticleModel.create(parsedArticle);
-    
-    res.status(200).json({ message: "Successfully Created Article", articleId: uniqueId });
+
+    res
+      .status(200)
+      .json({ message: "Successfully Created Article", articleId: uniqueId });
     return;
   } catch (err) {
     console.log(err);
     res.status(500).json({ error: "Internal Server Error" });
     return;
   }
-};
+}
 
-
-export async function editArticleHandler(req: Request, res: Response): Promise<void> {
+export async function editArticleHandler(
+  req: Request,
+  res: Response
+): Promise<void> {
   try {
     const authHeader = req.headers.authorization;
     const { articleId } = req.params;
@@ -217,36 +244,44 @@ export async function editArticleHandler(req: Request, res: Response): Promise<v
     if (!parsed.success || !parsedArticleId.success) {
       res.status(400).json({ error: "Bad Request" });
       return;
-    };
+    }
     const data = parsed.data;
 
     const [user, article] = await Promise.all([
       await UserModel.findOne({ userId }),
-      await ArticleModel.findOne({ articleId: parsedArticleId })
+      await ArticleModel.findOne({ articleId: parsedArticleId }),
     ]);
 
     if (!user || !article || article.displayRules.deleted) {
       res.status(404).json({ error: "Component Not Found" });
       return;
-    };
+    }
 
-
-    const userOrgs = await OrganisationModel.find({ "users.userId": user.userId });
-    const userHasOrg = userOrgs.find(org => org.organisationId === data.organisationId);
+    const userOrgs = await OrganisationModel.find({
+      "users.userId": user.userId,
+    });
+    const userHasOrg = userOrgs.find(
+      (org) => org.organisationId === data.organisationId
+    );
 
     if (!userHasOrg && !user.isTopLevelAdmin) {
       res.status(403).json({ error: "User Is Not In This Organisation" });
       return;
-    };
+    }
 
     if (!user.isTopLevelAdmin) {
-      const userPermissions = userHasOrg?.users.find(u => u.userId === user.userId);
+      const userPermissions = userHasOrg?.users.find(
+        (u) => u.userId === user.userId
+      );
 
-      if (!userPermissions || (!userPermissions.isAdmin && !userPermissions.canEdit)) {
+      if (
+        !userPermissions ||
+        (!userPermissions.isAdmin && !userPermissions.canEdit)
+      ) {
         res.status(403).json({ error: "User Does Not Have Create Permission" });
         return;
-      };
-    };
+      }
+    }
 
     const isAlreadyEditor =
       user.userId === article.metadata.author ||
@@ -268,9 +303,9 @@ export async function editArticleHandler(req: Request, res: Response): Promise<v
       },
       metadata: {
         ...objectArticle.metadata,
-        editors: editors
+        editors: editors,
       },
-      content: data.content
+      content: data.content,
     };
 
     const parsedArticle = ArticleSchemaZ.parse(constructedArticle);
@@ -278,7 +313,7 @@ export async function editArticleHandler(req: Request, res: Response): Promise<v
       { articleId: article.articleId },
       { $set: parsedArticle }
     );
-    
+
     res.status(200).json({ message: "Successfully Saved Changes" });
     return;
   } catch (err) {
@@ -286,46 +321,59 @@ export async function editArticleHandler(req: Request, res: Response): Promise<v
     res.status(500).json({ error: "Internal Server Error" });
     return;
   }
-};
+}
 
-
-export async function deleteArticleHandler(req: Request, res: Response): Promise<void> {
+export async function deleteArticleHandler(
+  req: Request,
+  res: Response
+): Promise<void> {
   try {
     const authHeader = req.headers.authorization;
     const userId = VerifyJWT(authHeader);
 
     const parsedArticle = z.string().safeParse(req.body.articleId);
     if (!parsedArticle.success) {
-      res.status(400).json({ error: "Invalid Article ID"});
+      res.status(400).json({ error: "Invalid Article ID" });
       return;
     }
     const articleId = parsedArticle.data.toLowerCase();
 
     const [user, article] = await Promise.all([
       UserModel.findOne({ userId }),
-      ArticleModel.findOne({ articleId })
+      ArticleModel.findOne({ articleId }),
     ]);
 
     if (!user || !article || article.displayRules.deleted) {
       res.status(404).json({ error: "User Or Article Not Found" });
       return;
-    };
+    }
 
     if (!user.isTopLevelAdmin) {
-      const userOrgs = await OrganisationModel.find({ "users.userId": user.userId });
-      const organisation = userOrgs.find(org => org.organisationId === article.organisationId);
+      const userOrgs = await OrganisationModel.find({
+        "users.userId": user.userId,
+      });
+      const organisation = userOrgs.find(
+        (org) => org.organisationId === article.organisationId
+      );
 
       if (!organisation) {
-        res.status(403).json({ error: "User Is Not In Designated Organisation" });
+        res
+          .status(403)
+          .json({ error: "User Is Not In Designated Organisation" });
         return;
-      };
-      const userPermissions = organisation.users.find(u => u.userId === user.userId);
+      }
+      const userPermissions = organisation.users.find(
+        (u) => u.userId === user.userId
+      );
 
-      if (!userPermissions || (!userPermissions.isAdmin && !userPermissions.canDelete)) {
+      if (
+        !userPermissions ||
+        (!userPermissions.isAdmin && !userPermissions.canDelete)
+      ) {
         res.status(403).json({ error: "User Cannot Delete Articles" });
         return;
       }
-    };
+    }
 
     article.displayRules.deleted = true;
     await article.save();
@@ -337,4 +385,4 @@ export async function deleteArticleHandler(req: Request, res: Response): Promise
     res.status(500).json({ error: "Internal Server Error" });
     return;
   }
-};
+}

@@ -1,5 +1,5 @@
-import mongoose, { Schema, Document, Model } from 'mongoose';
-import z from 'zod';
+import mongoose, { Schema, Document, Model } from "mongoose";
+import z from "zod";
 
 export const UserPermissionsZ = z.object({
   userId: z.string(),
@@ -58,7 +58,13 @@ const UserPermsSchema = new Schema<UserPermissions>(
 
 export const OrganisationSchema: Schema<OrganisationDocument> = new Schema({
   organisationName: { type: String, required: true, unique: true, index: true },
-  organisationId: { type: String, required: true, unique: true, index: true, lowercase: true },
+  organisationId: {
+    type: String,
+    required: true,
+    unique: true,
+    index: true,
+    lowercase: true,
+  },
   users: { type: [UserPermsSchema], default: [] },
   metadata: {
     logo: { type: String, required: false },
@@ -71,9 +77,10 @@ export const OrganisationSchema: Schema<OrganisationDocument> = new Schema({
 
 OrganisationSchema.index({ "users.userId": 1 });
 
-const OrganisationModel: Model<OrganisationDocument> = mongoose.model<OrganisationDocument>(
-  'organisation_collections',
-  OrganisationSchema
-);
+const OrganisationModel: Model<OrganisationDocument> =
+  mongoose.model<OrganisationDocument>(
+    "organisation_collections",
+    OrganisationSchema
+  );
 
 export default OrganisationModel;

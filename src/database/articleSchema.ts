@@ -1,6 +1,5 @@
-import mongoose, { Schema, Document, Model } from 'mongoose';
-import z from 'zod';
-
+import mongoose, { Schema, Document, Model } from "mongoose";
+import z from "zod";
 
 export const ArticleSchemaZ = z.object({
   title: z.string(),
@@ -24,7 +23,6 @@ export const ArticleSchemaZ = z.object({
     content: z.string(),
   }),
 });
-
 
 export interface ArticleDisplayRules {
   hidden: boolean;
@@ -56,7 +54,6 @@ export interface Article {
 }
 
 export interface ArticleDocument extends Article, Document {}
-
 
 // --- Subschemas ---
 
@@ -93,7 +90,13 @@ const ArticleContentSchema = new Schema<ArticleContent>(
 
 export const ArticlesSchema: Schema<ArticleDocument> = new Schema({
   title: { type: String, required: true },
-  articleId: { type: String, required: true, unique: true, index: true, lowercase: true },
+  articleId: {
+    type: String,
+    required: true,
+    unique: true,
+    index: true,
+    lowercase: true,
+  },
   organisationId: { type: String, required: true, index: true },
   displayRules: { type: DisplayRulesSchema, required: true },
   metadata: { type: ArticleMetadataSchema, required: true },
@@ -104,7 +107,7 @@ ArticlesSchema.index({ "metadata.author": 1 });
 ArticlesSchema.index({ "metadata.editors": 1 });
 
 const ArticleModel: Model<ArticleDocument> = mongoose.model<ArticleDocument>(
-  'articles_collections',
+  "articles_collections",
   ArticlesSchema
 );
 

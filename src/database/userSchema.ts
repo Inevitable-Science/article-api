@@ -1,5 +1,5 @@
-import mongoose, { Schema, Document, Model } from 'mongoose';
-import z from 'zod';
+import mongoose, { Schema, Document, Model } from "mongoose";
+import z from "zod";
 
 export const UserMetadataZ = z.object({
   username: z.string(),
@@ -12,14 +12,16 @@ export const UserMetadataZ = z.object({
 });
 
 export const UserSchemaZ = z.object({
-  walletAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/).transform((val) => val.toLowerCase()),
+  walletAddress: z
+    .string()
+    .regex(/^0x[a-fA-F0-9]{40}$/)
+    .transform((val) => val.toLowerCase()),
   userId: z.string().transform((val) => val.toLowerCase()),
   currentNonce: z.number(),
   isTopLevelAdmin: z.boolean(),
   attachments: z.array(z.string()),
   userMetadata: UserMetadataZ,
 });
-
 
 export interface UserMetadata {
   username: string;
@@ -40,9 +42,7 @@ export interface UserSchema {
   userMetadata: UserMetadata;
 }
 
-
 export interface UserDocument extends UserSchema, Document {}
-
 
 // Sub-schema for UserMetadata
 const UserMetadataSchema = new Schema<UserMetadata>(
@@ -69,7 +69,13 @@ export const UserSchema: Schema<UserDocument> = new Schema({
     trim: true,
     match: /^0x[a-fA-F0-9]{40}$/,
   },
-  userId: { type: String, required: true, unique: true, index: true, lowercase: true },
+  userId: {
+    type: String,
+    required: true,
+    unique: true,
+    index: true,
+    lowercase: true,
+  },
   currentNonce: { type: Number, required: true },
   isTopLevelAdmin: { type: Boolean, default: false },
   attachments: { type: [String], default: [] },
@@ -77,7 +83,7 @@ export const UserSchema: Schema<UserDocument> = new Schema({
 });
 
 const UserModel: Model<UserDocument> = mongoose.model<UserDocument>(
-  'user_collections',
+  "user_collections",
   UserSchema
 );
 

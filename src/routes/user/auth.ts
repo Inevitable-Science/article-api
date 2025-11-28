@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import UserModel from '../../database/userSchema';
+import UserModel from "../../database/userSchema";
 
 import { ENV } from "../../utils/env";
 import { JwtBodyType } from "../../utils/utils";
@@ -9,19 +9,22 @@ import { Address, verifyMessage } from "viem";
 import z from "zod";
 import jwt from "jsonwebtoken";
 
-
-export async function getNonceHandler(req: Request, res: Response): Promise<void> {
+export async function getNonceHandler(
+  req: Request,
+  res: Response
+): Promise<void> {
   try {
     const { address } = req.params;
 
-    const parsedAddress = z.string()
+    const parsedAddress = z
+      .string()
       .regex(/^0x[a-fA-F0-9]{40}$/)
       .safeParse(address);
 
     if (!parsedAddress.success) {
       res.status(400).json({ error: "Invalid request" });
       return;
-    };
+    }
 
     const walletAddress = parsedAddress.data.toLowerCase();
     const user = await UserModel.findOne({ walletAddress });
@@ -29,7 +32,7 @@ export async function getNonceHandler(req: Request, res: Response): Promise<void
     if (!user) {
       res.status(404).json({ error: "User not found" });
       return;
-    };
+    }
 
     res.status(200).json({ nonce: user.currentNonce });
     return;
@@ -37,8 +40,7 @@ export async function getNonceHandler(req: Request, res: Response): Promise<void
     res.status(500).json({ error: `Error fetching user data: ${err}` });
     return;
   }
-};
-
+}
 
 const AuthHandlerBody = z.object({
   address: z.string(),
@@ -51,7 +53,9 @@ export async function loginHandler(req: Request, res: Response): Promise<void> {
     const { address, signature } = parsed;
 
     // Find user by wallet address
-    const user = await UserModel.findOne({ walletAddress: address.toLowerCase() });
+    const user = await UserModel.findOne({
+      walletAddress: address.toLowerCase(),
+    });
     if (!user) {
       res.status(404).json({ error: "User not found" });
       return;
@@ -59,7 +63,7 @@ export async function loginHandler(req: Request, res: Response): Promise<void> {
 
     const message = getMessage("login", user.walletAddress, user.currentNonce);
 
-    const valid = await verifyMessage({ 
+    const valid = await verifyMessage({
       address: user.walletAddress as Address,
       message: message,
       signature: signature as `0x${string}`,
@@ -74,10 +78,10 @@ export async function loginHandler(req: Request, res: Response): Promise<void> {
     if (!valid) {
       res.status(403).json({ error: "Could not verify signature" });
       return;
-    };
+    }
 
     const payload: JwtBodyType = { userId: user.userId.toLowerCase() };
-    const userToken = jwt.sign(payload, ENV.JWT_SECRET, { expiresIn: '7d' });
+    const userToken = jwt.sign(payload, ENV.JWT_SECRET, { expiresIn: "7d" });
 
     res.status(200).json({ key: userToken });
     return;
@@ -86,4 +90,4 @@ export async function loginHandler(req: Request, res: Response): Promise<void> {
     res.status(500).json({ error: `Error fetching user data` });
     return;
   }
-};
+}

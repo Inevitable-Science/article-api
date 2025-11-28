@@ -11,7 +11,6 @@ import { v4 as uuidv4 } from "uuid";
 import path from "path";
 import jwt from "jsonwebtoken";
 
-
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 10 * 1024 * 1024 }, // 10MB max
@@ -23,7 +22,6 @@ const upload = multer({
     }
   },
 });
-
 
 export async function uploadImageHandler(
   req: Request,
@@ -54,8 +52,10 @@ export async function uploadImageHandler(
 
       const parts = authHeader.split(" ");
       if (parts.length !== 2 || parts[0] !== "Bearer") {
-        return res.status(401).json({ error: "Invalid Authorization header format" });
-      };
+        return res
+          .status(401)
+          .json({ error: "Invalid Authorization header format" });
+      }
 
       const authToken = parts[1];
 
@@ -68,9 +68,13 @@ export async function uploadImageHandler(
         return res.status(403).json({ error: "user not found" });
       }
 
-      if (uploadType !== "profile" && uploadType !== "article" && uploadType !== "organisation") {
+      if (
+        uploadType !== "profile" &&
+        uploadType !== "article" &&
+        uploadType !== "organisation"
+      ) {
         return res.status(400).json({ error: "Upload type must be specified" });
-      };
+      }
 
       const file = req.file;
       const ext = path.extname(file.originalname) || ".jpg";
@@ -106,4 +110,4 @@ export async function uploadImageHandler(
       });
     }
   });
-};
+}
