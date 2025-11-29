@@ -183,7 +183,6 @@ export async function getAllUserHandler(
 const CreateBody = z.object({
   overwritePassword: z.string().optional(),
   user: z.object({
-    //walletAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
     isTopLevelAdmin: z.boolean(),
     organisations: z.array(
       z.object({
@@ -250,9 +249,7 @@ export async function createUserHandler(
       userId: uniqueId,
       password: hashedPassword,
       mfaKey,
-      isTopLevelAdmin: data.overwritePassword
-        ? passedUser.isTopLevelAdmin
-        : false,
+      isTopLevelAdmin: passedUser.isTopLevelAdmin,
       attachments: [],
       userMetadata: {
         username: `User${uniqueId}`,
