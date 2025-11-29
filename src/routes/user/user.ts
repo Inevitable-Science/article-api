@@ -269,7 +269,6 @@ export async function createUserHandler(
     };
 
     const createdUser = await UserModel.create(parsedNewUser.data);
-
     if (!createdUser) throw new Error(ErrorCodes.DATABASE_ERROR);
 
     const newUserOrgs = data.user.organisations;
@@ -337,7 +336,7 @@ export async function createUserHandler(
       embed: constructedEmbed
     });
 
-    res.status(200).json({ password: password, mfaKey });
+    res.status(200).json({ userId: uniqueId, password: password, mfaKey });
     return;
   } catch (err) {
     await handleServerError(res, err);
