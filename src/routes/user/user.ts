@@ -1,6 +1,8 @@
 import { Request, Response } from "express";
 import z from "zod";
 import _ from "lodash";
+import { totp, authenticator } from 'otplib';
+import bcrypt from 'bcrypt';
 
 import ArticleModel from "../../database/articleSchema";
 import UserModel, { UserSchema, UserSchemaZ } from "../../database/userSchema";
@@ -9,7 +11,7 @@ import OrganisationModel, {
   UserPermissionsZ,
 } from "../../database/organisationSchema";
 
-import { generateDiscordTimestamp, generateRandomId, VerifyJWT } from "../../utils/utils";
+import { generateDiscordTimestamp, generatePassword, generateRandomId, VerifyJWT } from "../../utils/utils";
 import { ENV } from "../../utils/env";
 import { ErrorCodes } from "../../utils/errors/errors";
 import { handleServerError } from "../../utils/errors/errorHandler";
@@ -181,7 +183,7 @@ export async function getAllUserHandler(
 const CreateBody = z.object({
   overwritePassword: z.string().optional(),
   user: z.object({
-    walletAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
+    //walletAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
     isTopLevelAdmin: z.boolean(),
     organisations: z.array(
       z.object({
@@ -200,9 +202,6 @@ export async function createUserHandler(
   res: Response
 ): Promise<void> {
   try {
-    const userId = VerifyJWT(req, res);
-    if (!userId) return;
-
     const parsed = CreateBody.safeParse(req.body);
     if (!parsed.success) {
       res.status(400).json({ error: ErrorCodes.BAD_REQUEST });
@@ -214,12 +213,10 @@ export async function createUserHandler(
 
     let username = "admin";
     if (data.overwritePassword !== ENV.APP_PASSWORD) {
-      const [user, isExistingUser] = await Promise.all([
-        await UserModel.findOne({ userId: userId.toLowerCase() }),
-        await UserModel.findOne({
-          walletAddress: passedUser.walletAddress.toLowerCase(),
-        }),
-      ]);
+      const userId = VerifyJWT(req, res);
+      if (!userId) return;
+
+      const user = await UserModel.findOne({ userId: userId.toLowerCase() });
 
       if (!user) {
         res.status(404).json({ error: ErrorCodes.USER_NOT_FOUND });
@@ -231,22 +228,8 @@ export async function createUserHandler(
         return;
       }
 
-      if (isExistingUser) {
-        res.status(400).json({ error: ErrorCodes.BAD_REQUEST });
-        return;
-      };
-
       username = user.userMetadata.username;
-    } else {
-      const existingUser = await UserModel.findOne({
-        walletAddress: passedUser.walletAddress.toLowerCase(),
-      });
-
-      if (existingUser) {
-        res.status(400).json({ error: ErrorCodes.BAD_REQUEST });
-        return;
-      }
-    }
+    };
 
     let uniqueId;
     while (!uniqueId) {
@@ -256,12 +239,17 @@ export async function createUserHandler(
       if (!idExsists) {
         uniqueId = id;
       }
-    }
+    };
+
+    
+    const mfaKey = authenticator.generateSecret();
+    const password = generatePassword();
+    const hashedPassword = await bcrypt.hash(password, 10); // 10 salt rounds
 
     const newUser: UserSchema = {
-      walletAddress: passedUser.walletAddress.toLowerCase(),
       userId: uniqueId,
-      currentNonce: 0,
+      password: hashedPassword,
+      mfaKey,
       isTopLevelAdmin: data.overwritePassword
         ? passedUser.isTopLevelAdmin
         : false,
@@ -293,7 +281,20 @@ export async function createUserHandler(
       new Map(newUserOrgs.map((org) => [org.organisationId, org])).values()
     );
     if (passedUser.isTopLevelAdmin && newUserOrgs.length === 0) {
-      res.status(200).json({ message: "Successfully created new user" });
+      const constructedEmbed: Embed = {
+        title: "User Created",
+        description: `**User${uniqueId}** Created ${generateDiscordTimestamp(new Date(), "R")}`,
+        author: {
+          name: `${username}`
+        }
+      };
+
+      await logAction({
+        action: "logAction",
+        embed: constructedEmbed
+      });
+
+      res.status(200).json({ userId: uniqueId, password: password, mfaKey });
       return;
     }
 
@@ -328,9 +329,9 @@ export async function createUserHandler(
 
     const constructedEmbed: Embed = {
       title: "User Created",
-      description: `User With Wallet Address **${passedUser.walletAddress.toLowerCase()}** Created ${generateDiscordTimestamp(new Date(), "R")}`,
+      description: `**User${uniqueId}** Created ${generateDiscordTimestamp(new Date(), "R")}`,
       author: {
-        name: `${username} - ${userId}`
+        name: `${username}`
       }
     };
 
@@ -339,7 +340,7 @@ export async function createUserHandler(
       embed: constructedEmbed
     });
 
-    res.status(200).json({ message: "Successfully created new user" });
+    res.status(200).json({ password: password, mfaKey });
     return;
   } catch (err) {
     await handleServerError(res, err);

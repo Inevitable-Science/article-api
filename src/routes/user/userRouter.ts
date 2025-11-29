@@ -1,17 +1,19 @@
 import { Router } from "express";
-import { getNonceHandler, loginHandler } from "./auth";
+//import { getNonceHandler, loginHandler } from "./auth";
 import {
   createUserHandler,
   editUserHandler,
   getAllUserHandler,
   getUserHandler,
 } from "./user";
+import { loginPasswordHandler } from "./auth";
 
 const router = Router();
 
 // Auth
-router.get("/getNonce/:address", getNonceHandler);
-router.post("/login", loginHandler);
+//router.get("/getNonce/:address", getNonceHandler);
+//router.post("/login", loginHandler);
+router.post("/login", loginPasswordHandler);
 
 // User
 router.post("/fetch", getUserHandler);

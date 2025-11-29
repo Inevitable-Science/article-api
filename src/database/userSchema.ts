@@ -12,12 +12,9 @@ export const UserMetadataZ = z.object({
 });
 
 export const UserSchemaZ = z.object({
-  walletAddress: z
-    .string()
-    .regex(/^0x[a-fA-F0-9]{40}$/)
-    .transform((val) => val.toLowerCase()),
   userId: z.string().transform((val) => val.toLowerCase()),
-  currentNonce: z.number(),
+  password: z.string(),
+  mfaKey: z.string(),
   isTopLevelAdmin: z.boolean(),
   attachments: z.array(z.string()),
   userMetadata: UserMetadataZ,
@@ -34,9 +31,9 @@ export interface UserMetadata {
 }
 
 export interface UserSchema {
-  walletAddress: string;
   userId: string;
-  currentNonce: number;
+  password: string;
+  mfaKey: string;
   isTopLevelAdmin: boolean;
   attachments: string[];
   userMetadata: UserMetadata;
@@ -60,15 +57,6 @@ const UserMetadataSchema = new Schema<UserMetadata>(
 
 // Main UserSchema
 export const UserSchema: Schema<UserDocument> = new Schema({
-  walletAddress: {
-    type: String,
-    required: true,
-    unique: true,
-    index: true,
-    lowercase: true,
-    trim: true,
-    match: /^0x[a-fA-F0-9]{40}$/,
-  },
   userId: {
     type: String,
     required: true,
@@ -76,7 +64,8 @@ export const UserSchema: Schema<UserDocument> = new Schema({
     index: true,
     lowercase: true,
   },
-  currentNonce: { type: Number, required: true },
+  password: { type: String, required: true },
+  mfaKey: { type: String, required: true },
   isTopLevelAdmin: { type: Boolean, default: false },
   attachments: { type: [String], default: [] },
   userMetadata: { type: UserMetadataSchema, required: true },
