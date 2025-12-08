@@ -1,4 +1,5 @@
 import { Router } from "express";
+
 import { publicFetchArticleHandler } from "./article";
 
 const router = Router();

@@ -1,18 +1,19 @@
-import { Request, Response } from "express";
+import type { Request, Response } from "express";
 import z from "zod";
 
 import ArticleModel from "../../database/articleSchema";
-import UserModel from "../../database/userSchema";
+import type {
+  Organisation} from "../../database/organisationSchema";
 import OrganisationModel, {
-  Organisation,
   OrganisationSchemaZ,
   UserPermissionsZ,
 } from "../../database/organisationSchema";
-
-import { generateDiscordTimestamp, generateRandomId, VerifyJWT } from "../../utils/utils";
-import { ErrorCodes } from "../../utils/errors/errors";
+import UserModel from "../../database/userSchema";
 import { handleServerError } from "../../utils/errors/errorHandler";
-import logAction, { Embed } from "../../utils/logAction";
+import { ErrorCodes } from "../../utils/errors/errors";
+import type { Embed } from "../../utils/logAction";
+import logAction from "../../utils/logAction";
+import { generateDiscordTimestamp, generateRandomId, VerifyJWT } from "../../utils/utils";
 
 
 export async function fetchOrgHandler(

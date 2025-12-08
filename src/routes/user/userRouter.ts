@@ -1,12 +1,13 @@
 import { Router } from "express";
+
 //import { getNonceHandler, loginHandler } from "./auth";
+import { loginPasswordHandler } from "./auth";
 import {
   createUserHandler,
   editUserHandler,
   getAllUserHandler,
   getUserHandler,
 } from "./user";
-import { loginPasswordHandler } from "./auth";
 
 const router = Router();
 

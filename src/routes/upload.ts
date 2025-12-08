@@ -1,16 +1,19 @@
-import { Request, Response } from "express";
-import multer from "multer";
-import { PutObjectCommand } from "@aws-sdk/client-s3";
-import { v4 as uuidv4 } from "uuid";
 import path from "path";
+
+import { PutObjectCommand } from "@aws-sdk/client-s3";
+import type { Request, Response } from "express";
 import jwt from "jsonwebtoken";
+import multer from "multer";
+import { v4 as uuidv4 } from "uuid";
+
+
 
 import UserModel from "../database/userSchema";
 import { s3Client } from "../index";
 import { ENV } from "../utils/env";
-import { JwtBody, VerifyJWT } from "../utils/utils";
-import { ErrorCodes } from "../utils/errors/errors";
 import { handleServerError } from "../utils/errors/errorHandler";
+import { ErrorCodes } from "../utils/errors/errors";
+import { JwtBody, VerifyJWT } from "../utils/utils";
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -67,7 +70,7 @@ export async function uploadImageHandler(
       // Upload to S3
       await s3Client.send(
         new PutObjectCommand({
-          Bucket: ENV.S3_BUCKET_NAME!,
+          Bucket: ENV.S3_BUCKET_NAME,
           Key: key,
           Body: file.buffer,
           ContentType: file.mimetype,

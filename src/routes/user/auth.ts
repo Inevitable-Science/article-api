@@ -1,16 +1,18 @@
-import { Request, Response } from "express";
+import bcrypt from "bcrypt";
+import type { Request, Response } from "express";
+import jwt from "jsonwebtoken";
+import { authenticator, totp } from "otplib";
 import { Address, verifyMessage } from "viem";
 import z from "zod";
-import jwt from "jsonwebtoken";
-import bcrypt from "bcrypt";
-import { authenticator, totp } from "otplib";
 
 import UserModel from "../../database/userSchema";
 import { ENV } from "../../utils/env";
-import { generateDiscordTimestamp, JwtBodyType } from "../../utils/utils";
-import { ErrorCodes } from "../../utils/errors/errors";
 import { handleServerError } from "../../utils/errors/errorHandler";
-import logAction, { Embed } from "../../utils/logAction";
+import { ErrorCodes } from "../../utils/errors/errors";
+import type { Embed } from "../../utils/logAction";
+import logAction from "../../utils/logAction";
+import { generateDiscordTimestamp } from "../../utils/utils";
+import type { JwtBodyType } from "../../utils/utils";
 
 /*
 export async function getNonceHandler(

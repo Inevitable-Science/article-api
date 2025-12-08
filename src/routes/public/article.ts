@@ -2,11 +2,12 @@
 // /articles/:organisation - all articles on organisation site
 // /articles/id/:articleId - fetch article
 
+import type { Request, Response } from "express";
+import z from "zod";
+
 import ArticleModel from "@/src/database/articleSchema";
 import { handleServerError } from "@/src/utils/errors/errorHandler";
 import { ErrorCodes } from "@/src/utils/errors/errors";
-import { Request, Response } from "express";
-import z from "zod";
 
 
 export async function publicFetchArticleHandler(req: Request, res: Response): Promise<void> {

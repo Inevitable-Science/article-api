@@ -1,6 +1,8 @@
-import { Response } from "express";
-import { ErrorCodes } from "./errors";
+import type { Response } from "express";
+
 import logAction from "../logAction";
+
+import { ErrorCodes } from "./errors";
 
 export async function handleServerError(res: Response, error: unknown) {
   console.error("Server Error:", error);

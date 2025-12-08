@@ -1,8 +1,11 @@
-import express, { NextFunction, Request, Response } from "express";
 import dotenv from "dotenv";
+import type { NextFunction, Request, Response } from "express";
+import express from "express";
+
 dotenv.config();
 
 import rateLimit from "express-rate-limit";
+import mongoose from "mongoose";
 import { RateLimiterMemory } from "rate-limiter-flexible";
 
 // Dependencies
@@ -10,14 +13,13 @@ import cors from "cors";
 import { S3Client } from "@aws-sdk/client-s3";
 
 // Database
-import mongoose from "mongoose";
 
-import { ENV } from "./utils/env";
-import { ErrorCodes } from "./utils/errors/errors";
-import { uploadImageHandler } from "./routes/upload";
-import userRouter from "./routes/user/userRouter";
 import articleRouter from "./routes/article/articleRouter";
 import organisationRouter from "./routes/organisation/organisationRouter";
+import { uploadImageHandler } from "./routes/upload";
+import userRouter from "./routes/user/userRouter";
+import { ENV } from "./utils/env";
+import { ErrorCodes } from "./utils/errors/errors";
 
 const app = express();
 app.use(express.json());

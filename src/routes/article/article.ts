@@ -1,16 +1,18 @@
-import { Request, Response } from "express";
+import type { Request, Response } from "express";
 import z from "zod";
 
-import UserModel from "../../database/userSchema";
-import { generateDiscordTimestamp, generateRandomId, VerifyJWT } from "../../utils/utils";
-import OrganisationModel from "../../database/organisationSchema";
+import type {
+  Article} from "../../database/articleSchema";
 import ArticleModel, {
-  Article,
   ArticleSchemaZ,
 } from "../../database/articleSchema";
-import { ErrorCodes } from "../../utils/errors/errors";
+import OrganisationModel from "../../database/organisationSchema";
+import UserModel from "../../database/userSchema";
 import { handleServerError } from "../../utils/errors/errorHandler";
-import logAction, { Embed } from "../../utils/logAction";
+import { ErrorCodes } from "../../utils/errors/errors";
+import type { Embed } from "../../utils/logAction";
+import logAction from "../../utils/logAction";
+import { generateDiscordTimestamp, generateRandomId, VerifyJWT } from "../../utils/utils";
 
 export async function fetchArticleHandler(
   req: Request,

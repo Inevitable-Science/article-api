@@ -1,21 +1,23 @@
-import { Request, Response } from "express";
-import z from "zod";
+import bcrypt from 'bcrypt';
+import type { Request, Response } from "express";
 import _ from "lodash";
 import { totp, authenticator } from 'otplib';
-import bcrypt from 'bcrypt';
+import z from "zod";
 
 import ArticleModel from "../../database/articleSchema";
-import UserModel, { UserSchema, UserSchemaZ } from "../../database/userSchema";
+import type {
+  UserPermissions} from "../../database/organisationSchema";
 import OrganisationModel, {
-  UserPermissions,
   UserPermissionsZ,
 } from "../../database/organisationSchema";
-
-import { generateDiscordTimestamp, generatePassword, generateRandomId, VerifyJWT } from "../../utils/utils";
+import UserModel, { UserSchemaZ } from "../../database/userSchema";
+import type { UserSchema} from "../../database/userSchema";
 import { ENV } from "../../utils/env";
-import { ErrorCodes } from "../../utils/errors/errors";
 import { handleServerError } from "../../utils/errors/errorHandler";
-import logAction, { Embed } from "../../utils/logAction";
+import { ErrorCodes } from "../../utils/errors/errors";
+import type { Embed } from "../../utils/logAction";
+import logAction from "../../utils/logAction";
+import { generateDiscordTimestamp, generatePassword, generateRandomId, VerifyJWT } from "../../utils/utils";
 
 
 export async function getUserHandler(

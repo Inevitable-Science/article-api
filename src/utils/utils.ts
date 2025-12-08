@@ -1,9 +1,9 @@
+import type { Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import z from "zod";
 
 import { ENV } from "./env";
 import { ErrorCodes } from "./errors/errors";
-import { Request, Response } from "express";
 
 export const JwtBody = z.object({
   userId: z.string(),
