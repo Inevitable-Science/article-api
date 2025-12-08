@@ -36,7 +36,7 @@ async function logAction({ action, message, embed }: { action: "logError" | "log
     if (embed) {
       const footer = {
         text: "Article API",
-        icon_url: "https://inev-v5.vercel.app/assets/img/branding/favicon-dark.ico"
+        icon_url: "https://cdn.inevitable.science/static/img/branding/manifest/android-chrome-192x192.png"
       };
 
       const constructedEmbedd = { ...embed, color, footer };

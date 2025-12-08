@@ -121,7 +121,7 @@ export async function loginHandler(req: Request, res: Response): Promise<void> {
 const LoginHandlerBody = z.object({
   userId: z.string(),
   password: z.string(),
-  mfaCode: z.string(),
+  mfaCode: z.string().length(6, "MFA code must be 6 digits").regex(/^\d+$/, "MFA code must contain only digits"),
 });
 
 export async function loginPasswordHandler(req: Request, res: Response): Promise<void> {
@@ -134,7 +134,6 @@ export async function loginPasswordHandler(req: Request, res: Response): Promise
 
     const { userId, password, mfaCode } = parsed.data;
 
-    // Find user by wallet address
     const user = await UserModel.findOne({ userId });
     if (!user) {
       res.status(404).json({ error: ErrorCodes.USER_NOT_FOUND });
