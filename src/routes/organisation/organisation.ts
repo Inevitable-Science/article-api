@@ -26,6 +26,7 @@ export async function fetchOrgHandler(
     const parsedOrgId = z.string().safeParse(req.params.organisationId);
     if (!parsedOrgId.success) {
       res.status(400).json({ error: ErrorCodes.BAD_REQUEST });
+      return;
     };
     const organisationId = parsedOrgId.data;
 
