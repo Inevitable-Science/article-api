@@ -34,7 +34,7 @@ export function VerifyJWT(req: Request, res: Response): string | undefined {
     return parsedDecoded.userId.toLowerCase();
   } catch {
     res.status(403).json({ error: ErrorCodes.UNAUTHORIZED });
-    return undefined;
+    return;
   };
 };
 

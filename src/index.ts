@@ -16,6 +16,7 @@ import { S3Client } from "@aws-sdk/client-s3";
 
 import articleRouter from "./routes/article/articleRouter";
 import organisationRouter from "./routes/organisation/organisationRouter";
+import publicRouter from "./routes/public/publicRouter";
 import { uploadImageHandler } from "./routes/upload";
 import userRouter from "./routes/user/userRouter";
 import { ENV } from "./utils/env";
@@ -59,6 +60,7 @@ const globalRateLimit = async (
     res.status(429).json({
       error: ErrorCodes.RATE_LIMIT,
     });
+    return;
   }
 };
 
@@ -99,6 +101,7 @@ app.post("/upload/:uploadType", uploadImageHandler);
 app.use("/user", userRouter);
 app.use("/article", articleRouter);
 app.use("/organisation", organisationRouter);
+app.use("/public", publicRouter);
 
 connectDB().then(() => {
   app.listen(PORT, () => {

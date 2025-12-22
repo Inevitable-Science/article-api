@@ -1,10 +1,10 @@
 import { Router } from "express";
 
-import { publicFetchArticleHandler } from "./article";
+import { publicFetchArticleHandler, publicOrgArticleHandler } from "./article";
 
 const router = Router();
 
 router.get('/article/id/:articleId', publicFetchArticleHandler);
-//router.get('/article/org/:articleId', fetchArticleHandler);
+router.get('/organisation/id/:organisationId', publicOrgArticleHandler);
 
 export default router;
