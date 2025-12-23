@@ -76,11 +76,77 @@ export async function publicOrgArticleHandler(req: Request, res: Response): Prom
       return;
     }
 
-    const articlesMap = articles.map((article) => {
+    const filteredArticles = articles.filter(article => !article.displayRules.deleted && !article.displayRules.hidden);
+
+    const articlesMap = filteredArticles.map((article) => {
+      if (article.displayRules.deleted || article.displayRules.hidden) return;
+
       return {
         title: article.title,
+        datePublished: article.metadata.dateWritten,
         articleId: article.articleId,
         landingImage: article.content.landingImage || null,
+        keywords: article.content.keywords,
+        tags: article.content.tags
+      }
+    });
+
+    res.status(200).json(articlesMap);
+    return;
+  } catch (err) {
+    handleServerError(res, err);
+  }
+};
+
+
+interface OrgArrayType {
+  organisationName: string | null;
+  organisationId: string;
+  metadata: {
+    logo: string;
+    description: string;
+    website: string;
+    x: string;
+    discord: string;
+  };
+}
+
+export async function publicFetchAllArticleHandler(req: Request, res: Response): Promise<void> {
+  try {
+    const articles =  await ArticleModel.find({ 'displayRules.showOnMainSite': true });
+    const filteredArticles = articles.filter(article => !article.displayRules.deleted && !article.displayRules.hidden);
+    
+    const uniqueOrgsIds = [
+      ...new Set(filteredArticles.map(article => article.organisationId))
+    ];
+
+    
+    const orgArray: OrgArrayType[] = [];
+    for (const orgId of uniqueOrgsIds) {
+      const org = await OrganisationModel.findOne({ organisationId: orgId.toLowerCase() });
+      
+      if (!org) continue;
+      
+      const constructedOrg = {
+        organisationName: org.organisationName ?? null,
+        organisationId: org.organisationId,
+        metadata: org.metadata,
+      }
+
+      orgArray.push(constructedOrg)
+    };
+
+    const articlesMap = articles.map((article) => {
+      const correspondingOrg = orgArray.find(org => org.organisationId.toLowerCase() === article.organisationId.toLowerCase());
+
+      return {
+        title: article.title,
+        datePublished: article.metadata.dateWritten,
+        articleId: article.articleId,
+        landingImage: article.content.landingImage || null,
+        keywords: article.content.keywords,
+        tags: article.content.tags,
+        organisation: correspondingOrg ?? null,
       }
     });
 
