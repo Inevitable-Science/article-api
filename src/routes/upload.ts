@@ -48,7 +48,12 @@ export async function uploadImageHandler(
 
     try {
       const { uploadType } = req.params;
-      const userId = VerifyJWT(req, res);
+      const auth = VerifyJWT(req);
+      if (!auth.success) {
+        res.status(403).json({ error: ErrorCodes.UNAUTHORIZED });
+        return;
+      }
+      const userId = auth.userId;
 
       const user = await UserModel.findOne({ userId });
       if (!user) {

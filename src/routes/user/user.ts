@@ -25,7 +25,12 @@ export async function getUserHandler(
   res: Response
 ): Promise<void> {
   try {
-    const userId = VerifyJWT(req, res);
+    const auth = VerifyJWT(req);
+    if (!auth.success) {
+      res.status(403).json({ error: ErrorCodes.UNAUTHORIZED });
+      return;
+    }
+    const userId = auth.userId;
     
     const user = await UserModel.findOne({ userId });
     if (!user) {
@@ -152,7 +157,12 @@ export async function getAllUserHandler(
   res: Response
 ): Promise<void> {
   try {
-    const userId = VerifyJWT(req, res);
+    const auth = VerifyJWT(req);
+    if (!auth.success) {
+      res.status(403).json({ error: ErrorCodes.UNAUTHORIZED });
+      return;
+    }
+    const userId = auth.userId;
 
     const user = await UserModel.findOne({ userId });
     if (!user) {
@@ -214,8 +224,12 @@ export async function createUserHandler(
 
     let username = "admin";
     if (data.overwritePassword !== ENV.APP_PASSWORD) {
-      const userId = VerifyJWT(req, res);
-      if (!userId) return;
+      const auth = VerifyJWT(req);
+      if (!auth.success) {
+        res.status(403).json({ error: ErrorCodes.UNAUTHORIZED });
+        return;
+      }
+      const userId = auth.userId;
 
       const user = await UserModel.findOne({ userId: userId.toLowerCase() });
 
@@ -360,7 +374,12 @@ export async function editUserHandler(
   res: Response
 ): Promise<void> {
   try {
-    const userId = VerifyJWT(req, res);
+    const auth = VerifyJWT(req);
+    if (!auth.success) {
+      res.status(403).json({ error: ErrorCodes.UNAUTHORIZED });
+      return;
+    }
+    const userId = auth.userId;
 
     const parsed = EditBody.safeParse(req.body);
     if (!parsed.success) {

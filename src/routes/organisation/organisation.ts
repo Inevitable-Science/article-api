@@ -21,7 +21,12 @@ export async function fetchOrgHandler(
   res: Response
 ): Promise<void> {
   try {
-    const userId = VerifyJWT(req, res);
+    const auth = VerifyJWT(req);
+    if (!auth.success) {
+      res.status(403).json({ error: ErrorCodes.UNAUTHORIZED });
+      return;
+    }
+    const userId = auth.userId;
 
     const parsedOrgId = z.string().safeParse(req.params.organisationId);
     if (!parsedOrgId.success) {
@@ -137,7 +142,12 @@ export async function createOrgHandler(
   res: Response
 ): Promise<void> {
   try {
-    const userId = VerifyJWT(req, res);
+    const auth = VerifyJWT(req);
+    if (!auth.success) {
+      res.status(403).json({ error: ErrorCodes.UNAUTHORIZED });
+      return;
+    }
+    const userId = auth.userId;
 
     const user = await UserModel.findOne({ userId });
     const parsedBody = CreateBody.safeParse(req.body);
@@ -214,7 +224,12 @@ export async function editOrgHandler(
   res: Response
 ): Promise<void> {
   try {
-    const userId = VerifyJWT(req, res);
+    const auth = VerifyJWT(req);
+    if (!auth.success) {
+      res.status(403).json({ error: ErrorCodes.UNAUTHORIZED });
+      return;
+    }
+    const userId = auth.userId;
 
     const parsedData = CreateBody.safeParse(req.body);
     const parsedOrganisationId = z.string().safeParse(req.params.organisationId);

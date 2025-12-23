@@ -12,6 +12,26 @@ import UserModel from "../../../src/database/userSchema";
 import OrganisationModel from "../../../src/database/organisationSchema";
 
 
+export const ArticleSchemaZ = z.object({
+  title: z.string(),
+  content: z.object({
+    keywords: z.array(z.string()),
+    tags: z.array(z.string()),
+    landingImage: z.string(),
+    content: z.string()
+  }),
+  author: z.object({
+    username: z.string().nullable(),
+    profilePicture: z.string().nullable(),
+    dateWritten: z.union([z.string(), z.date()])
+  }),
+  organisation: z.object({
+    name: z.string(),
+    organisationId: z.string(),
+    logo: z.string().nullable()
+  }),
+});
+
 export async function publicFetchArticleHandler(req: Request, res: Response): Promise<void> {
   try {
     const articleId = req.params.articleId;
@@ -39,11 +59,12 @@ export async function publicFetchArticleHandler(req: Request, res: Response): Pr
       author: {
         username: author?.userMetadata.username || null,
         profilePicture: author?.userMetadata.profilePicture || null,
+        dateWritten: article.metadata.dateWritten
       },
       organisation: {
-        name: organisation?.organisationName ?? null,
-        organisationId: organisation?.organisationId ?? null,
-        logo: organisation?.metadata.logo ?? null
+        name: organisation?.organisationName,
+        organisationId: organisation?.organisationId,
+        logo: organisation?.metadata.logo || null
       },
     };
 

@@ -26,6 +26,11 @@ export async function handleServerError(res: Response, error: unknown) {
     embed: constructedEmbed
   });
 
+  if (res.headersSent) {
+    console.warn("Headers already sent, cannot send error response");
+    return;
+  }
+
   return res.status(500).json({
     error: ErrorCodes.SERVER_ERROR,
   });

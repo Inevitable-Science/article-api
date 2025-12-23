@@ -11,19 +11,20 @@ export const JwtBody = z.object({
 
 export type JwtBodyType = z.infer<typeof JwtBody>;
 
+type AuthResult =
+  | { success: true; userId: string }
+  | { success: false; };
 
-export function VerifyJWT(req: Request, res: Response): string | undefined {
+export function VerifyJWT(req: Request): AuthResult {
   const authHeader = req.headers.authorization;
 
   if (!authHeader) {
-    res.status(403).json({ error: ErrorCodes.UNAUTHORIZED });
-    return;
+    return { success: false };
   }
 
   const parts = authHeader.split(" ");
   if (parts.length !== 2 || parts[0] !== "Bearer") {
-    res.status(403).json({ error: ErrorCodes.UNAUTHORIZED });
-    return;
+    return { success: false };
   }
 
   const authToken = parts[1];
@@ -31,10 +32,9 @@ export function VerifyJWT(req: Request, res: Response): string | undefined {
   try {
     const decoded = jwt.verify(authToken, ENV.JWT_SECRET);
     const parsedDecoded = JwtBody.parse(decoded);
-    return parsedDecoded.userId.toLowerCase();
+    return { success: true, userId: parsedDecoded.userId };
   } catch {
-    res.status(403).json({ error: ErrorCodes.UNAUTHORIZED });
-    return;
+    return { success: false };
   };
 };
 

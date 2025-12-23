@@ -20,7 +20,13 @@ export async function fetchArticleHandler(
 ): Promise<void> {
   try {
     const { articleId } = req.params;
-    const userId = VerifyJWT(req, res);
+    const auth = VerifyJWT(req);
+    if (!auth.success) {
+      res.status(403).json({ error: ErrorCodes.UNAUTHORIZED });
+      return;
+    }
+    const userId = auth.userId;
+
 
     const parsed = z.string().safeParse(articleId);
     if (!parsed.success) {
@@ -65,9 +71,7 @@ export async function fetchArticleHandler(
           userPermissions.canEdit
         )
       ) {
-        res
-          .status(403)
-          .json({ error: ErrorCodes.FORBIDDEN });
+        res.status(403).json({ error: ErrorCodes.FORBIDDEN });
         return;
       }
     } else {
@@ -149,7 +153,12 @@ export async function createArticleHandler(
   res: Response
 ): Promise<void> {
   try {
-    const userId = VerifyJWT(req, res);
+    const auth = VerifyJWT(req);
+    if (!auth.success) {
+      res.status(403).json({ error: ErrorCodes.UNAUTHORIZED });
+      return;
+    }
+    const userId = auth.userId;
 
     const parsed = CreateEditBody.safeParse(req.body);
     if (!parsed.success) {
@@ -251,7 +260,12 @@ export async function editArticleHandler(
 ): Promise<void> {
   try {
     const { articleId } = req.params;
-    const userId = VerifyJWT(req, res);
+    const auth = VerifyJWT(req);
+    if (!auth.success) {
+      res.status(403).json({ error: ErrorCodes.UNAUTHORIZED });
+      return;
+    }
+    const userId = auth.userId;
 
     const parsed = CreateEditBody.safeParse(req.body);
     const parsedArticleId = z.string().safeParse(articleId);
@@ -359,7 +373,12 @@ export async function deleteArticleHandler(
   res: Response
 ): Promise<void> {
   try {
-    const userId = VerifyJWT(req, res);
+    const auth = VerifyJWT(req);
+    if (!auth.success) {
+      res.status(403).json({ error: ErrorCodes.UNAUTHORIZED });
+      return;
+    }
+    const userId = auth.userId;
 
     const parsedArticle = z.string().safeParse(req.body.articleId);
     if (!parsedArticle.success) {
