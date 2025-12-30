@@ -278,7 +278,7 @@ export async function editArticleHandler(
 
     const [user, article] = await Promise.all([
       await UserModel.findOne({ userId }),
-      await ArticleModel.findOne({ articleId: parsedArticleId }),
+      await ArticleModel.findOne({ articleId: parsedArticleId.data.toLowerCase() }),
     ]);
 
     if (!user || !article || article.displayRules.deleted) {
@@ -324,7 +324,7 @@ export async function editArticleHandler(
 
     const constructedArticle = {
       title: data.title,
-      articleId: article.articleId,
+      articleId: parsedArticleId.data.toLowerCase(),
       organisationId: data.organisationId,
       displayRules: {
         ...data.displayRules,
