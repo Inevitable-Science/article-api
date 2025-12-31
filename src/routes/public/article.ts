@@ -54,8 +54,14 @@ export async function publicFetchArticleHandler(req: Request, res: Response): Pr
       await OrganisationModel.findOne({ organisationId: article.organisationId }),
     ]);
 
+    const overview = `${sliceToWord(
+      htmlToText(article.content.content),
+      130
+    )}...`;
+
     const mappedArticle = {
       title: article.title,
+      overview,
       content: article.content,
       author: {
         username: author?.userMetadata.username || null,
