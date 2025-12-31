@@ -10,6 +10,7 @@ import { handleServerError } from "../../../src/utils/errors/errorHandler";
 import { ErrorCodes } from "../../../src/utils/errors/errors";
 import UserModel from "../../../src/database/userSchema";
 import OrganisationModel from "../../../src/database/organisationSchema";
+import { htmlToText, sliceToWord } from "../../utils/utils";
 
 
 export const ArticleSchemaZ = z.object({
@@ -132,13 +133,16 @@ interface OrgArrayType {
   };
 }
 
-export async function publicFetchAllArticleHandler(req: Request, res: Response): Promise<void> {
+export async function publicFetchAllArticlesHandler(req: Request, res: Response): Promise<void> {
   try {
-    const articles =  await ArticleModel.find({ 'displayRules.showOnMainSite': true });
-    const filteredArticles = articles.filter(article => !article.displayRules.deleted && !article.displayRules.hidden);
+    const articles =  await ArticleModel.find({
+      'displayRules.showOnMainSite': true,
+      'displayRules.hidden': false,
+      'displayRules.deleted': false
+    });
     
     const uniqueOrgsIds = [
-      ...new Set(filteredArticles.map(article => article.organisationId))
+      ...new Set(articles.map(article => article.organisationId))
     ];
 
     
@@ -160,11 +164,17 @@ export async function publicFetchAllArticleHandler(req: Request, res: Response):
     const articlesMap = articles.map((article) => {
       const correspondingOrg = orgArray.find(org => org.organisationId.toLowerCase() === article.organisationId.toLowerCase());
 
+      const overview = `${sliceToWord(
+        htmlToText(article.content.content),
+        130
+      )}...`;
+
       return {
         title: article.title,
         datePublished: article.metadata.dateWritten,
         articleId: article.articleId,
         landingImage: article.content.landingImage || null,
+        overview: overview ?? null,
         keywords: article.content.keywords,
         tags: article.content.tags,
         organisation: correspondingOrg ?? null,
@@ -172,6 +182,39 @@ export async function publicFetchAllArticleHandler(req: Request, res: Response):
     });
 
     res.status(200).json(articlesMap);
+    return;
+  } catch (err) {
+    handleServerError(res, err);
+  }
+};
+
+
+export async function publicFetchLatestArticles(req: Request, res: Response): Promise<void> {
+  try {
+    const fetchedArticles =  await ArticleModel
+      .find({
+        'displayRules.showOnMainSite': true,
+        'displayRules.hidden': false,
+        'displayRules.deleted': false
+      })
+      .sort({ 'metadata.dateWritten': -1 })
+      .limit(6);
+
+    const articles = fetchedArticles.map((article) => {
+      const overview = `${sliceToWord(
+        htmlToText(article.content.content),
+        130
+      )}...`;
+
+      return {
+        title: article.title,
+        articleId: article.articleId,
+        landingImage: article.content.landingImage || null,
+        overview: overview ?? null,
+      }
+    });
+
+    res.status(200).json(articles);
     return;
   } catch (err) {
     handleServerError(res, err);

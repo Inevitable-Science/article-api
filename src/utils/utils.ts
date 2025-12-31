@@ -3,7 +3,6 @@ import jwt from "jsonwebtoken";
 import z from "zod";
 
 import { ENV } from "./env";
-import { ErrorCodes } from "./errors/errors";
 
 export const JwtBody = z.object({
   userId: z.string(),
@@ -75,4 +74,24 @@ export function generatePassword(length = 10) {
     result += chars.charAt(Math.floor(Math.random() * chars.length));
   }
   return result;
+}
+
+export function htmlToText(html: string): string {
+  let text = html
+    .replace(/<[^>]*>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  text = text.replace(/\n{3,}/g, "\n\n").trim();
+
+  return text;
+}
+
+export function sliceToWord(text: string, maxLength: number) {
+  if (text.length <= maxLength) return text;
+
+  return text
+    .slice(0, maxLength)
+    .replace(/\s+\S*$/, "")
+    .trim();
 }
