@@ -1,19 +1,15 @@
-import path from "path";
-
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import type { Request, Response } from "express";
-import jwt from "jsonwebtoken";
 import multer from "multer";
 import { v4 as uuidv4 } from "uuid";
-
-
 
 import UserModel from "../database/userSchema";
 import { s3Client } from "../index";
 import { ENV } from "../utils/env";
 import { handleServerError } from "../utils/errors/errorHandler";
 import { ErrorCodes } from "../utils/errors/errors";
-import { JwtBody, VerifyJWT } from "../utils/utils";
+import { VerifyJWT } from "../utils/utils";
+import sharp from "sharp";
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -69,16 +65,19 @@ export async function uploadImageHandler(
       }
 
       const file = req.file;
-      const ext = path.extname(file.originalname) || ".jpg";
-      const key = `article/${uploadType}/${uuidv4()}${ext}`;
+      const key = `article/${uploadType}/${uuidv4()}.webp`;
+      const webpBuffer = await sharp(file.buffer)
+        .resize(2048, 2048, { fit: "inside", withoutEnlargement: true })
+        .webp({ quality: 90, effort: 6 })
+        .toBuffer();
 
       // Upload to S3
       await s3Client.send(
         new PutObjectCommand({
           Bucket: ENV.S3_BUCKET_NAME,
           Key: key,
-          Body: file.buffer,
-          ContentType: file.mimetype,
+          Body: webpBuffer,
+          ContentType: "image/webp",
           //ACL: "public-read", // Makes it publicly readable
           CacheControl: "public, max-age=31536000, immutable", // 1 year cache
         })
