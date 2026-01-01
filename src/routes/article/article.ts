@@ -209,6 +209,18 @@ export async function createArticleHandler(
       }
     }
 
+    const trimmedKeywords = data.content.keywords
+      .map(e => e.trim())
+      .filter(Boolean);
+
+    const trimmedTags = data.content.tags
+      .map(e => e.trim())
+      .filter(Boolean);
+
+    const trimmedAttachments = data.content.tags
+      .map(e => e.trim())
+      .filter(Boolean);
+
     const article: Article = {
       ...data,
       articleId: uniqueId,
@@ -221,6 +233,13 @@ export async function createArticleHandler(
         author: user.userId,
         editors: [],
       },
+      content: {
+        keywords: trimmedKeywords,
+        tags: trimmedTags,
+        attachments: trimmedAttachments,
+        landingImage: data.content.landingImage,
+        content: data.content.content,
+      }
     };
 
     const parsedArticle = ArticleSchemaZ.safeParse(article);
@@ -322,6 +341,18 @@ export async function editArticleHandler(
 
     const objectArticle = article.toObject();
 
+    const trimmedKeywords = data.content.keywords
+      .map(e => e.trim())
+      .filter(Boolean);
+
+    const trimmedTags = data.content.tags
+      .map(e => e.trim())
+      .filter(Boolean);
+
+    const trimmedAttachments = data.content.tags
+      .map(e => e.trim())
+      .filter(Boolean);
+
     const constructedArticle = {
       title: data.title,
       articleId: parsedArticleId.data.toLowerCase(),
@@ -334,7 +365,13 @@ export async function editArticleHandler(
         ...objectArticle.metadata,
         editors: editors,
       },
-      content: data.content,
+      content: {
+        keywords: trimmedKeywords,
+        tags: trimmedTags,
+        attachments: trimmedAttachments,
+        landingImage: data.content.landingImage,
+        content: data.content.content,
+      }
     };
 
     const parsedArticle = ArticleSchemaZ.safeParse(constructedArticle);
