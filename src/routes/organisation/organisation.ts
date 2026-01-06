@@ -36,8 +36,8 @@ export async function fetchOrgHandler(
     const organisationId = parsedOrgId.data;
 
     const [user, organisation] = await Promise.all([
-      await UserModel.findOne({ userId }),
-      await OrganisationModel.findOne({ organisationId: organisationId }),
+      UserModel.findOne({ userId }),
+      OrganisationModel.findOne({ organisationId: organisationId }),
     ]);
 
     if (!user || !organisation) {
@@ -54,8 +54,8 @@ export async function fetchOrgHandler(
     }
 
     const [allUsers, orgArticles] = await Promise.all([
-      await UserModel.find(),
-      await ArticleModel.find({ organisationId: organisationId }),
+      UserModel.find(),
+      ArticleModel.find({ organisationId: organisationId }),
     ]);
 
     const orgUserPermissionsMap = Object.fromEntries(
@@ -242,8 +242,8 @@ export async function editOrgHandler(
     const organisationId = parsedOrganisationId.data;
 
     const [user, organisation] = await Promise.all([
-      await UserModel.findOne({ userId }),
-      await OrganisationModel.findOne({ organisationId: organisationId }),
+      UserModel.findOne({ userId }),
+      OrganisationModel.findOne({ organisationId: organisationId }),
     ]);
 
     if (!user || !organisation) {

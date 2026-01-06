@@ -50,8 +50,8 @@ export async function publicFetchArticleHandler(req: Request, res: Response): Pr
     }
 
     const [author, organisation] = await Promise.all([
-      await UserModel.findOne({ userId: article.metadata.author }),
-      await OrganisationModel.findOne({ organisationId: article.organisationId }),
+      UserModel.findOne({ userId: article.metadata.author }),
+      OrganisationModel.findOne({ organisationId: article.organisationId }),
     ]);
 
     const overview = `${sliceToWord(
@@ -95,8 +95,8 @@ export async function publicOrgArticleHandler(req: Request, res: Response): Prom
     };
 
     const [organisation, articles] = await Promise.all([
-      await OrganisationModel.findOne({ organisationId: parsed.data }),
-      await ArticleModel.find({ organisationId: parsed.data })
+      OrganisationModel.findOne({ organisationId: parsed.data }),
+      ArticleModel.find({ organisationId: parsed.data })
     ]);
 
     if (!organisation) {

@@ -109,10 +109,10 @@ export async function getUserHandler(
     }
 
     const [userWrittenArticles, userEditedArticles] = await Promise.all([
-      await ArticleModel.find({
+      ArticleModel.find({
         "metadata.author": userId,
       }),
-      await ArticleModel.find({
+      ArticleModel.find({
         "metadata.editors": userId,
       }),
     ]);

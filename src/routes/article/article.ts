@@ -90,7 +90,7 @@ export async function fetchArticleHandler(
     }
 
     const [author, editors] = await Promise.all([
-      await UserModel.findOne({ userId: article.metadata.author }),
+      UserModel.findOne({ userId: article.metadata.author }),
       UserModel.find(
         { userId: { $in: article.metadata.editors } },
         { userMetadata: 1, userId: 1 }
@@ -296,8 +296,8 @@ export async function editArticleHandler(
     const data = parsed.data;
 
     const [user, article] = await Promise.all([
-      await UserModel.findOne({ userId }),
-      await ArticleModel.findOne({ articleId: parsedArticleId.data.toLowerCase() }),
+      UserModel.findOne({ userId }),
+      ArticleModel.findOne({ articleId: parsedArticleId.data.toLowerCase() }),
     ]);
 
     if (!user || !article || article.displayRules.deleted) {
